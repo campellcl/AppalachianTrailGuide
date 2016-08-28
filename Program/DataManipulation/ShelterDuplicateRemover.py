@@ -80,7 +80,13 @@ def remove_duplicates(shelters):
     return shelters_no_duplicates
 
 def write_data():
-    pass
+    storage_location = "/home/chuckdaddy/Documents/AppalachianTrailGuide/Data/TrailShelters/"
+    new_shelters_csv = open(storage_location + "newShelters.csv", 'w')
+    new_shelters_csv.write("SID,name,data_set,lat,lon,shelter_type\n")
+    for key,value in shelters_no_duplicates.items():
+        new_shelters_csv.write(str(value['SID']) + "," + value['name'] + "," +  value['data_set']
+        + "," + str(value['lat']) + "," + str(value['lon']) + "," + value['shelter_type'])
+    new_shelters_csv.close()
 
 if __name__ == '__main__':
     main()
