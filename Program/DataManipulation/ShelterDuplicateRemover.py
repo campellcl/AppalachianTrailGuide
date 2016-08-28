@@ -9,7 +9,10 @@ import os
 import collections
 from fuzzywuzzy import fuzz
 
-
+"""
+main -Goes through every shelter in the AT_Shelters_Combined dataset and removes duplicate shelters. Then the new
+    dataset (with duplicates removed) is written to the hard drive.
+"""
 def main():
     filename = "AT Shelters Combined.csv"
     storage_dir = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/TrailShelters/"
@@ -29,11 +32,19 @@ def main():
                     'shelter_type': read_data[4]
                 }
             line_num += 1
-    remove_duplicates(shelters=shelters)
+    shelters_no_duplicates = remove_duplicates(shelters=shelters)
 
+"""
+remove_duplicates -Finds and removes duplicate shelters in the dataset by utilizing two comparisions for equality:
+    1. A fuzzy string comparison between the duplicate in question and every entry in the unique shelter dataset,
+        with a comparison threshold of 90/100 or greater.
+    2. A latitude and longitude comparison between the duplicate shelter in question and every entry in the unique
+        shelter dataset. Latitude and longitude are rounded to the 3rd decimal place and then compared for equality.
+:param shelters -A dictionary representing the entire Combined_Shelter_Dataset with duplicates to be removed included.
+"""
 def remove_duplicates(shelters):
     shelters_no_duplicates = collections.OrderedDict()
-    # Add the first shelter to the list of no duplicates?
+    # Add the first shelter to the list of no duplicates.
     shelters_no_duplicates[1] = shelters[1]
     comparison_threshold = 90
 
@@ -66,6 +77,8 @@ def remove_duplicates(shelters):
         if not same_shelter_by_string:
             if not same_shelter_by_gis:
                 shelters_no_duplicates[key1] = value1
+    return shelters_no_duplicates
+
 def write_data():
     pass
 
