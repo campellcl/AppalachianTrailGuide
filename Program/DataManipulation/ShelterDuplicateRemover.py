@@ -33,6 +33,7 @@ def main():
                 }
             line_num += 1
     shelters_no_duplicates = remove_duplicates(shelters=shelters)
+    write_data(shelters_no_duplicates)
 
 """
 remove_duplicates -Finds and removes duplicate shelters in the dataset by utilizing two comparisions for equality:
