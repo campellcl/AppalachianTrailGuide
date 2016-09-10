@@ -2,23 +2,25 @@
 HikerValidator.py
 Handles the mapping between user entered text and GPS coordinates for shelters.
 :Author: Chris Campell
-:Version: 9/1/2016
+:Version: 9/8/2016
 """
 
 import os
 import json
+from fuzzywuzzy import fuzz
+from collections import OrderedDict
 
 class HikerValidator(object):
     """
     HikerValidator(object) -Wrapper for ShelterValidator, HostelValidator, and GeoValidator. Maps a hiker's entered
         locations to validated GPS coordinates in the appropriate data sets.
     :Author: Chris Campell
-    :Version: 7/22/2016
+    :Version: 9/8/2016
     """
 
     """
     __init__ -Constructor for objects of type HikerValidator.
-    :param validated_shelters: The AT_Shelters dataset loaded into memory from json file.
+    :param validated_shelters: The AT_Shelters data set loaded into memory from json file.
     :param validated_hostels: The AT_Hostels data set loaded into memory from json file.
     :param validated_places: The AT_Places data set loaded into memory from json file.
     """
@@ -26,51 +28,43 @@ class HikerValidator(object):
         self.validated_shelters = validated_shelters
         self.validated_hostels = validated_hostels
         self.validated_places = validated_places
-        self.storage_location = "C:/Users/Chris/Documents/GitHub/ATS/Data"
+        self.storage_location = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data"
 
     """
-    validate_start_loc -Maps the unvalidated hiker['start_loc'] to a valid location in the AT_Shelters data set. Returns
-        the unique identifier (lookup key) for the mapped shelter in the validated_shelters dictionary.
-    :param unvalidated_start_loc: The un-mapped string the hiker entered online for the starting location field.
-    :return shelter_name: The unique identifier (lookup key) for the mapped shelter in the
-        validated_shelters dictionary.
+    validate_entry_locations -Takes a hiker journal entry and attempts to map the provided
+        start_loc and dest to a validated shelter.
+    :param unvalidated_start_loc: The user entered string for their starting location.
+    :param unvalidated_dest: The user entered string for their destination location.
+    :param comparison_threshold: The threshold for which a match is considered valid.
     """
-    def validate_start_loc(self, unvalidated_start_loc):
-        # TODO: Rewrite this method to return shelter_id instead of shelter_name.
+    def validate_entry_locations(self, unvalidated_start_loc, unvalidated_dest, comparison_threshold=90):
+        max_comp_ratio_usl = 0
+        max_comp_ratio_ud = 0
+        max_comp_sid_usl = 0
+        max_comp_sid_ud = 0
         if unvalidated_start_loc is None:
-            return None
-        unvalidated_start_loc = str.lower(unvalidated_start_loc)
-        # print("Mapping Start Location: %s..." % unvalidated_start_loc)
-        for shelter_name, entry in self.validated_shelters.items():
-            shelter_name = str.lower(shelter_name)
-            # TODO: Fuzzy string comparison.
-            if unvalidated_start_loc == shelter_name:
-                # print("Success! Start Location: %s Mapped to Lookup Key: %s" % (unvalidated_start_loc, shelter_name))
-                return shelter_name
-        # print("Failure. Start Location: %s was unable to be mapped to a shelter dictionary lookup key." % unvalidated_start_loc)
-        return None
+            max_comp_sid_usl = None
+        if unvalidated_dest is None:
+            max_comp_sid_ud = None
+        for shelter_id, shelter_data in self.validated_shelters.items():
+            # Create a comparison ratio for the hiker's entered start_loc and the validated shelter's name.
+            comparison_ratio_usl = fuzz.partial_ratio(unvalidated_start_loc, shelter_data['name'])
+            # Create a comparison ratio for the hiker's entered destination and the validated shelter's name.
+            comparison_ratio_ud = fuzz.partial_ratio(unvalidated_dest, shelter_data['name'])
 
-    """
-    validate_dest -Maps the unvalidated hiker['dest'] to a valid location in the AT_Shelters data set. Returns the
-        unique identifier (lookup key) for the mapped shelter in the validated_shelters dictionary.
-    :param unvalidated_destination: The un-mapped string the hiker entered online for the destination field.
-    :return shelter_name: The unique identifier (lookup key) for the mapped shelter in the
-        validated_shelters dictionary.
-    """
-    def validate_dest(self, unvalidated_destination):
-        # TODO: Rewrite this method to return shelter_id instead of shelter_name.
-        if unvalidated_destination is None:
-            return None
-        unvalidated_dest = str.lower(unvalidated_destination)
-        # print("Mapping Destination Location: %s..." % unvalidated_dest)
-        for shelter_name, entry in self.validated_shelters.items():
-            shelter_name = str.lower(shelter_name)
-            # TODO: Fuzzy string comparison.
-            if unvalidated_dest == shelter_name:
-                # print("Success! Destination: %s Mapped to Lookup Key: %s" % (unvalidated_dest, shelter_name))
-                return shelter_name
-        # print("Failure. Destination: %s was unable to be mapped to a shelter dictionary lookup key." % unvalidated_dest)
-        return None
+            if comparison_ratio_usl >= max_comp_ratio_usl:
+                max_comp_ratio_usl = comparison_ratio_usl
+                max_comp_sid_usl = shelter_id
+            if comparison_ratio_ud >= max_comp_ratio_ud:
+                max_comp_ratio_ud = comparison_ratio_ud
+                max_comp_sid_ud = shelter_id
+
+            # Perform comparison threshold check.
+            if max_comp_ratio_usl < comparison_threshold:
+                max_comp_sid_usl = None
+            if max_comp_ratio_ud < comparison_threshold:
+                max_comp_sid_ud = None
+        return (max_comp_sid_usl, max_comp_sid_ud)
 
     """
     validate_entry -Maps an unvalidated hiker's trail journal entry to a validated entry in one of the data sets.
@@ -78,12 +72,12 @@ class HikerValidator(object):
     :return entry: The same entry now mapped to a valid shelter object from one of the data sets.
     """
     def validate_entry(self, entry):
-        start_loc_lookup_key = self.validate_start_loc(entry['start_loc'])
-        dest_lookup_key = self.validate_dest(entry['dest'])
+        start_loc_lookup_key, dest_lookup_key = self.validate_entry_locations(
+            unvalidated_start_loc=entry['start_loc'], unvalidated_dest=entry['dest'], comparison_threshold=90)
         if start_loc_lookup_key is not None:
             entry['start_loc'] = {
-                'shelter_name': start_loc_lookup_key,
-                'shelter_id': self.validated_shelters[start_loc_lookup_key]['id'],
+                'shelter_name': self.validated_shelters[start_loc_lookup_key]['name'],
+                'shelter_id': start_loc_lookup_key,
                 'lat': self.validated_shelters[start_loc_lookup_key]['lat'],
                 'lon': self.validated_shelters[start_loc_lookup_key]['lon'],
                 'type': self.validated_shelters[start_loc_lookup_key]['type']
@@ -92,8 +86,8 @@ class HikerValidator(object):
             entry['start_loc'] = None
         if dest_lookup_key is not None:
             entry['dest'] = {
-                'shelter_name': dest_lookup_key,
-                'shelter_id': self.validated_shelters[dest_lookup_key]['id'],
+                'shelter_name': self.validated_shelters[dest_lookup_key]['name'],
+                'shelter_id': dest_lookup_key,
                 'lat': self.validated_shelters[dest_lookup_key]['lat'],
                 'lon': self.validated_shelters[dest_lookup_key]['lon'],
                 'type': self.validated_shelters[dest_lookup_key]['type']
@@ -107,16 +101,27 @@ class HikerValidator(object):
     :param hiker: The deserialized hiker object read from the json file.
     """
     def validate_shelters(self, hiker):
+        statistics = {'val_ratio': None, 'succ': {}, 'fail': {}}
         unmapped_entries = []
         unvalidated_journal = hiker['journal']
+        unmapped_start_loc = []
+        unmapped_dest_loc = []
         for entry_num, entry in unvalidated_journal.items():
             geocoded_entry = self.validate_entry(entry)
+            # TODO: Report statistics, names unmapped: {"shelter_1,shelter_2,shelter_3"}
+            # if start_loc was not mapped correctly.
             if geocoded_entry['start_loc'] is None and geocoded_entry['dest'] is None:
                 unmapped_entries.append(entry_num)
             else:
                 hiker[entry_num] = geocoded_entry
         num_mapped = len(unvalidated_journal) - len(unmapped_entries)
-        print("Hiker %s (%s)'s Geocoding Statistics: There were %d entries successfully mapped out of %d." %(hiker['identifier'], hiker['name'], num_mapped, len(unvalidated_journal)))
+        print("Hiker %s (%s)'s Geocoding Statistics: There were %d entries successfully mapped out of %d."
+              %(hiker['identifier'], hiker['name'], num_mapped, len(unvalidated_journal)))
+
+        print("\tUnmapped Shelters: {%s}" % unmapped_start_loc)
+        # for unmapped_entry_num in unmapped_entries:
+            # unmapped_start_loc.append(hiker['journal'][unmapped_entry_num]['start_loc'])
+            # unmapped_dest_loc.append(hiker['journal'][unmapped_entry_num]['end_loc'])
         for unmapped_entry in unmapped_entries:
             del hiker['journal'][unmapped_entry]
 
@@ -125,7 +130,7 @@ class HikerValidator(object):
     :param hiker -The deserialized hiker object read from the json file and mapped.
     """
     def write_validated_hiker(self, hiker):
-        validated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/ATS/Data/Hiker_Data/Validated_Hikers"
+        validated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/HikerData/ValidatedHikers"
         hiker_id = hiker['identifier']
         with open(validated_hikers_data_path + "/" + str(hiker_id) + ".json", 'w') as fp:
             json.dump(hiker, fp=fp)
@@ -142,14 +147,14 @@ def get_validated_shelters(validated_shelters_path):
         for line in iter(fp):
             if not line_num == 0:
                 split_string = str.split(line, sep=",")
-                shelter_name = split_string[0]
-                shelter_id = split_string[1]
+                shelter_id = split_string[0]
+                shelter_name = split_string[1]
                 data_set = split_string[2]
                 lat = float(split_string[3])
                 lon = float(split_string[4])
                 type = split_string[5]
-                validated_shelters[str.lower(shelter_name)] = {
-                    'id': shelter_id, 'num': 0, 'dataset': data_set,
+                validated_shelters[shelter_id] = {
+                    'name': shelter_name, 'dataset': data_set,
                     'type': type, 'lat': lat, 'lon': lon
                 }
             line_num += 1
@@ -170,9 +175,9 @@ main -Main method for hiker validation. Goes through every unvalidated hiker and
     AT Shelters database.
 """
 def main():
-    unvalidated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/ATS/Data/Hiker_Data/UnvalidatedHikers/"
-    validated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/ATS/Data/Hiker_Data/ValidatedHikers/"
-    validated_shelter_data_path = "C:/Users/Chris/Documents/GitHub/ATS/Data/Shelter_Data"
+    unvalidated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/HikerData/UnvalidatedHikers/"
+    validated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/HikerData/ValidatedHikers/"
+    validated_shelter_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/TrailShelters/"
 
     # Go through the list of unvalidated hikers and validate.
     for filename in os.listdir(unvalidated_hikers_data_path):
@@ -181,7 +186,7 @@ def main():
             with open(unvalidated_hikers_data_path + "/" + filename, 'r') as fp:
                 hiker = json.load(fp=fp)
             # Load the validated AT shelters into memory:
-            validated_shelters = get_validated_shelters(validated_shelters_path=validated_shelter_data_path + "validated_shelters.csv")
+            validated_shelters = get_validated_shelters(validated_shelters_path=validated_shelter_data_path + "newShelters.csv")
             # TODO: Load validated hostels into memory:
             # validated_hostels = get_validated_hostels(validated_hostels_path=validated_shelter_data_path + "/validated_hostels.csv")
             # TODO: Load validated places (that are not recognized shelters or hostels) into memory:
@@ -193,7 +198,7 @@ def main():
                                        validated_hostels=None, validated_places=None)
             # Execute shelter validation.
             validator.validate_shelters(hiker)
-            # If there are any
+            # If there are any successfully mapped journal entries, write them to validated hikers.
             if len(hiker['journal']) > 0:
                 validator.write_validated_hiker(hiker)
         else:
