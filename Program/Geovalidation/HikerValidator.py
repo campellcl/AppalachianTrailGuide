@@ -9,6 +9,8 @@ import os
 import json
 from fuzzywuzzy import fuzz
 from collections import OrderedDict
+import numpy as np
+import copy
 
 class HikerValidator(object):
     """
@@ -17,6 +19,7 @@ class HikerValidator(object):
     :Author: Chris Campell
     :Version: 9/8/2016
     """
+    # TODO: Declare data structure to hold statistics for each hiker
 
     """
     __init__ -Constructor for objects of type HikerValidator.
@@ -32,98 +35,172 @@ class HikerValidator(object):
 
     """
     validate_entry_locations -Takes a hiker journal entry and attempts to map the provided
-        start_loc and dest to a validated shelter.
+        start_loc and dest to a validated shelter in the AT Shelters data set.
     :param unvalidated_start_loc: The user entered string for their starting location.
     :param unvalidated_dest: The user entered string for their destination location.
-    :param comparison_threshold: The threshold for which a match is considered valid.
+    :param comparison_threshold: The threshold by which a match is considered valid during fuzzy string comparison.
+    :returns (comp_ratios_usl, comp_ratios_ud): The top three fuzzy string comparisons greater than the
+            comparsion_threshold for both start_location and destination.
+        :return comp_ratios_usl: The top three matching shelter strings for start_location as determined by
+                fuzzy string comparison.
+        :return comp_ratios_ud: The top three matching shelter strings for destination as determined by
+                fuzzy string comparison.
     """
     def validate_entry_locations(self, unvalidated_start_loc, unvalidated_dest, comparison_threshold=90):
-        max_comp_ratio_usl = 0
-        max_comp_ratio_ud = 0
-        max_comp_sid_usl = 0
-        max_comp_sid_ud = 0
-        if unvalidated_start_loc is None:
-            max_comp_sid_usl = None
-        if unvalidated_dest is None:
-            max_comp_sid_ud = None
+        # Create a container to store the first second and third most likely shelter matches for the hiker's USL
+        comp_ratios_usl = {'comp_threshold': comparison_threshold,
+                           'first': {'assoc_sid': None, 's_name': None, 'comp_ratio': -1},
+                           'second': {'assoc_sid': None, 's_name': None, 'comp_ratio': -1},
+                           'third': {'assoc_sid': None, 's_name': None, 'comp_ratio': -1}}
+        # Create a container to store the first, second, and third most likely shelter matches for the hiker's UD.
+        comp_ratios_ud = {'comp_threshold': comparison_threshold,
+                          'first': {'assoc_sid': None, 's_name': None, 'comp_ratio': -1},
+                          'second': {'assoc_sid': None, 's_name': None, 'comp_ratio': -1},
+                          'third': {'assoc_sid': None, 's_name': None, 'comp_ratio': -1}}
+
+        # If the user didn't enter any text then there can be no geovalidation.
+        # TODO: Make sure that the code still performs as expected if one or the other is null; not just both.
+        if unvalidated_start_loc is None and unvalidated_dest is None:
+            return (comp_ratios_usl, comp_ratios_ud)
+
         for shelter_id, shelter_data in self.validated_shelters.items():
             # Create a comparison ratio for the hiker's entered start_loc and the validated shelter's name.
             comparison_ratio_usl = fuzz.partial_ratio(unvalidated_start_loc, shelter_data['name'])
             # Create a comparison ratio for the hiker's entered destination and the validated shelter's name.
             comparison_ratio_ud = fuzz.partial_ratio(unvalidated_dest, shelter_data['name'])
 
-            if comparison_ratio_usl >= max_comp_ratio_usl:
-                max_comp_ratio_usl = comparison_ratio_usl
-                max_comp_sid_usl = shelter_id
-            if comparison_ratio_ud >= max_comp_ratio_ud:
-                max_comp_ratio_ud = comparison_ratio_ud
-                max_comp_sid_ud = shelter_id
+            # Perform comparison threshold check:
+            if comparison_ratio_usl >= comparison_threshold:
+                # Iterate through the comparison ratios and find the right place to store the comparison ratio.
+                if comparison_ratio_usl >= comp_ratios_usl['third']['comp_ratio']:
+                    if comparison_ratio_usl >= comp_ratios_usl['second']['comp_ratio']:
+                        if comparison_ratio_usl >= comp_ratios_usl['first']['comp_ratio']:
+                            # Comparison ratio is the new first highest.
+                            comp_ratios_usl['first']['assoc_sid'] = shelter_id
+                            comp_ratios_usl['first']['s_name'] = shelter_data['name']
+                            comp_ratios_usl['first']['comp_ratio'] = comparison_ratio_usl
+                        else:
+                            # Comparison ratio is the new second highest.
+                            comp_ratios_usl['second']['assoc_sid'] = shelter_id
+                            comp_ratios_usl['second']['s_name'] = shelter_data['name']
+                            comp_ratios_usl['second']['comp_ratio'] = comparison_ratio_usl
+                    else:
+                        # Comparison ratio is the new third highest.
+                        comp_ratios_usl['third']['assoc_sid'] = shelter_id
+                        comp_ratios_usl['third']['s_name'] = shelter_data['name']
+                        comp_ratios_usl['third']['comp_ratio'] = comparison_ratio_usl
 
-            # Perform comparison threshold check.
-            if max_comp_ratio_usl < comparison_threshold:
-                max_comp_sid_usl = None
-            if max_comp_ratio_ud < comparison_threshold:
-                max_comp_sid_ud = None
-        return (max_comp_sid_usl, max_comp_sid_ud)
+            # Perform comparison threshold check:
+            if comparison_ratio_ud >= comparison_threshold:
+                # Iterate through the comparison ratios and find the right place to store entry.
+                if comparison_ratio_ud >= comp_ratios_ud['third']['comp_ratio']:
+                    if comparison_ratio_ud >= comp_ratios_ud['second']['comp_ratio']:
+                        if comparison_ratio_ud >= comp_ratios_ud['first']['comp_ratio']:
+                            # Comparison ratio is the new first highest.
+                            comp_ratios_ud['first']['assoc_sid'] = shelter_id
+                            comp_ratios_ud['first']['s_name'] = shelter_data['name']
+                            comp_ratios_ud['first']['comp_ratio'] = comparison_ratio_ud
+                        else:
+                            # Comparison ratio is the new second highest.
+                            comp_ratios_ud['second']['assoc_sid'] = shelter_id
+                            comp_ratios_ud['second']['s_name'] = shelter_data['name']
+                            comp_ratios_ud['second']['comp_ratio'] = comparison_ratio_ud
+                    else:
+                        # Comparison ratio is the new third highest.
+                        comp_ratios_ud['third']['assoc_sid'] = shelter_id
+                        comp_ratios_ud['third']['s_name'] = shelter_data['name']
+                        comp_ratios_ud['third']['comp_ratio'] = comparison_ratio_ud
+        return (comp_ratios_usl, comp_ratios_ud)
 
     """
     validate_entry -Maps an unvalidated hiker's trail journal entry to a validated entry in one of the data sets.
-    :param entry: An entry from the hiker's trail journal which is unmapped to a GPS location.
-    :return entry: The same entry now mapped to a valid shelter object from one of the data sets.
+    :param user_start_loc: The start location from the trail journal entry to be mapped to a GPS location.
+    :param user_dest_loc: The destination location from the trail journal entry to be mapped to a GPS location.
+    :returns (validated_entry, comp_ratios_start_loc, comp_ratios_dest_loc):
+        :return validated_entry: The now mapped/validated user_start_location and user_destination_location; returns
+            None for key 'start_loc' if not mappable, and None for key 'dest' if not mappable.
+        :return comp_ratios_start_loc: The top three results and their associated comparision ratios from the geocoding
+            fuzzy string comparision process for the user's starting location.
+        :return comp_ratios_dest_loc: The top three results and their associated comparision ratios fromt he geocoding
+            fuzzy string comparison process for the user's destination location.
     """
-    def validate_entry(self, entry):
-        start_loc_lookup_key, dest_lookup_key = self.validate_entry_locations(
-            unvalidated_start_loc=entry['start_loc'], unvalidated_dest=entry['dest'], comparison_threshold=90)
-        if start_loc_lookup_key is not None:
-            entry['start_loc'] = {
-                'shelter_name': self.validated_shelters[start_loc_lookup_key]['name'],
-                'shelter_id': start_loc_lookup_key,
-                'lat': self.validated_shelters[start_loc_lookup_key]['lat'],
-                'lon': self.validated_shelters[start_loc_lookup_key]['lon'],
-                'type': self.validated_shelters[start_loc_lookup_key]['type']
+    def validate_entry(self, user_start_loc, user_dest_loc):
+        validated_entry = {}
+        # Get the three best results for geocoded solutions for both start_loc and destination.
+        comp_ratios_start_loc, comp_ratios_dest_loc = self.validate_entry_locations(
+            unvalidated_start_loc=user_start_loc, unvalidated_dest=user_dest_loc, comparison_threshold=85)
+
+        # Determine if geovalidation was successful for the start_location
+        if comp_ratios_start_loc['first']['assoc_sid'] is not None:
+            validated_entry['start_loc'] = {
+                'shelter_name': comp_ratios_start_loc['first']['s_name'],
+                'SID': comp_ratios_start_loc['first']['assoc_sid'],
+                'lat': self.validated_shelters[comp_ratios_start_loc['first']['assoc_sid']]['lat'],
+                'lon': self.validated_shelters[comp_ratios_start_loc['first']['assoc_sid']]['lon'],
+                'type': self.validated_shelters[comp_ratios_start_loc['first']['assoc_sid']]['lon'],
             }
         else:
-            entry['start_loc'] = None
-        if dest_lookup_key is not None:
-            entry['dest'] = {
-                'shelter_name': self.validated_shelters[dest_lookup_key]['name'],
-                'shelter_id': dest_lookup_key,
-                'lat': self.validated_shelters[dest_lookup_key]['lat'],
-                'lon': self.validated_shelters[dest_lookup_key]['lon'],
-                'type': self.validated_shelters[dest_lookup_key]['type']
+            # Geovalidation for the provided start_location was unsuccessful.
+            validated_entry['start_loc'] = None
+
+        # Determine if geovalidation was successful for the destination.
+        if comp_ratios_dest_loc['first']['assoc_sid'] is not None:
+            validated_entry['dest'] = {
+                'shelter_name': comp_ratios_dest_loc['first']['s_name'],
+                'SID': comp_ratios_dest_loc['first']['assoc_sid'],
+                'lat': self.validated_shelters[comp_ratios_dest_loc['first']['assoc_sid']]['lat'],
+                'lon': self.validated_shelters[comp_ratios_dest_loc['first']['assoc_sid']]['lon'],
+                'type': self.validated_shelters[comp_ratios_dest_loc['first']['assoc_sid']]['type']
             }
         else:
-            entry['dest'] = None
-        return entry
+            # Geovalidation for the provided dest_location was unsuccessful.
+            validated_entry['dest'] = None
+        return (validated_entry, comp_ratios_start_loc, comp_ratios_dest_loc)
 
     """
     validate_shelters -Goes through the hiker's journal entries: geocoding each starting location and destination.
     :param hiker: The deserialized hiker object read from the json file.
     """
-    def validate_shelters(self, hiker):
-        statistics = {'val_ratio': None, 'succ': {}, 'fail': {}}
-        unmapped_entries = []
+    def validate_shelters(self, hiker, validation_stats=False):
+        # TODO: Actually update the journal mapping statistics dictionary below.
+        journal_mapping_statistics = {'validation_ratio': None, 'failed': {}}
+        failed_mappings_start_loc = {}
+        failed_mappings_dest_loc = {}
         unvalidated_journal = hiker['journal']
-        unmapped_start_loc = []
-        unmapped_dest_loc = []
-        for entry_num, entry in unvalidated_journal.items():
-            geocoded_entry = self.validate_entry(entry)
-            # TODO: Report statistics, names unmapped: {"shelter_1,shelter_2,shelter_3"}
-            # if start_loc was not mapped correctly.
-            if geocoded_entry['start_loc'] is None and geocoded_entry['dest'] is None:
-                unmapped_entries.append(entry_num)
-            else:
-                hiker[entry_num] = geocoded_entry
-        num_mapped = len(unvalidated_journal) - len(unmapped_entries)
-        print("Hiker %s (%s)'s Geocoding Statistics: There were %d entries successfully mapped out of %d."
-              %(hiker['identifier'], hiker['name'], num_mapped, len(unvalidated_journal)))
+        validated_journal = {}
 
-        print("\tUnmapped Shelters: {%s}" % unmapped_start_loc)
-        # for unmapped_entry_num in unmapped_entries:
-            # unmapped_start_loc.append(hiker['journal'][unmapped_entry_num]['start_loc'])
-            # unmapped_dest_loc.append(hiker['journal'][unmapped_entry_num]['end_loc'])
-        for unmapped_entry in unmapped_entries:
-            del hiker['journal'][unmapped_entry]
+        for entry_num, entry in unvalidated_journal.items():
+            validated_entry, comp_ratios_start_loc, comp_ratios_dest_loc = self.validate_entry(
+                user_start_loc=entry['start_loc'], user_dest_loc=entry['dest'])
+
+            validated_journal[entry_num] = copy.deepcopy(entry)
+            if validated_entry['start_loc'] is None:
+                # The user entered start_location could not be mapped.
+                failed_mappings_start_loc[entry_num] = {'start_loc': entry['start_loc'],
+                                                        'geo_stats_start_loc': comp_ratios_start_loc}
+                validated_journal[entry_num]['start_loc'] = None
+            else:
+                # The user entered start_location was mapped.
+                validated_journal[entry_num]['start_loc'] = validated_entry['start_loc']
+
+            if validated_entry['dest'] is None:
+                # The user entered destination location could not be mapped.
+                failed_mappings_dest_loc[entry_num] = {'dest': entry['dest'],
+                                                       'geo_stats_dest_loc': comp_ratios_dest_loc}
+                validated_journal[entry_num]['dest'] = None
+            else:
+                # The user entered destination location was mapped.
+                validated_journal[entry_num]['dest'] = validated_entry['dest']
+
+        if validation_stats:
+            # TODO: Compute additional statistics.
+            '''
+            self.geovalidation_stats = {
+                'unvalidated_journal': unvalidated_journal,
+                'validated_journal': validated_journal
+            }
+            '''
+        return (validated_journal, journal_mapping_statistics)
 
     """
     write_validated_hiker -Writes a geocoded hiker to the specified storage directory in json format.
@@ -174,13 +251,14 @@ def get_validated_places(validated_places_path):
 main -Main method for hiker validation. Goes through every unvalidated hiker and maps their location to an entry in the
     AT Shelters database.
 """
-def main():
+def main(stats=False):
     unvalidated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/HikerData/UnvalidatedHikers/"
     validated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/HikerData/ValidatedHikers/"
     validated_shelter_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/TrailShelters/"
 
     # Go through the list of unvalidated hikers and validate.
     for filename in os.listdir(unvalidated_hikers_data_path):
+        # If the hiker has already been validated, don't re-validate.
         if filename not in os.listdir(validated_hikers_data_path):
             # Load the unvalidated json file into memory.
             with open(unvalidated_hikers_data_path + "/" + filename, 'r') as fp:
@@ -197,12 +275,13 @@ def main():
             validator = HikerValidator(validated_shelters=validated_shelters,
                                        validated_hostels=None, validated_places=None)
             # Execute shelter validation.
-            validator.validate_shelters(hiker)
+            validated_journal = validator.validate_shelters(hiker)
             # If there are any successfully mapped journal entries, write them to validated hikers.
-            if len(hiker['journal']) > 0:
+            if len(validated_journal) > 0:
                 validator.write_validated_hiker(hiker)
         else:
             print("Hiker %s Has Already ben Validated." % filename)
 
 if __name__ == '__main__':
-    main()
+    stats = True
+    main(stats)
