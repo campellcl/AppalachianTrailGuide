@@ -26,12 +26,17 @@ class HikerValidator(object):
     :param validated_shelters: The AT_Shelters data set loaded into memory from json file.
     :param validated_hostels: The AT_Hostels data set loaded into memory from json file.
     :param validated_places: The AT_Places data set loaded into memory from json file.
+    :param statistics: A boolean flag; if True then statistics regarding the geocoding success of hiker's journals
+        will be recorded.
     """
-    def __init__(self, validated_shelters, validated_hostels, validated_places):
+    def __init__(self, validated_shelters, validated_hostels, validated_places, statistics=False):
         self.validated_shelters = validated_shelters
         self.validated_hostels = validated_hostels
         self.validated_places = validated_places
-        self.storage_location = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data"
+        self.storage_location = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'Data/'))
+        self.stats = statistics
+        if statistics:
+            self.geocode_stats = {}
 
     """
     validate_entry_locations -Takes a hiker journal entry and attempts to map the provided
@@ -158,12 +163,11 @@ class HikerValidator(object):
         return (validated_entry, comp_ratios_start_loc, comp_ratios_dest_loc)
 
     """
-    validate_shelters -Goes through the hiker's journal entries: geocoding each starting location and destination.
+    validate_shelters -Goes through the hiker's journal entries: geocoding each starting location and destination. If
+        the self.stats flag was set to true during object instantiation then record geocoding statistics.
     :param hiker: The deserialized hiker object read from the json file.
     """
-    def validate_shelters(self, hiker, validation_stats=False):
-        # TODO: Actually update the journal mapping statistics dictionary below.
-        journal_mapping_statistics = {'validation_ratio': None, 'failed': {}}
+    def validate_shelters(self, hiker):
         failed_mappings_start_loc = {}
         failed_mappings_dest_loc = {}
         unvalidated_journal = hiker['journal']
@@ -176,8 +180,12 @@ class HikerValidator(object):
             validated_journal[entry_num] = copy.deepcopy(entry)
             if validated_entry['start_loc'] is None:
                 # The user entered start_location could not be mapped.
-                failed_mappings_start_loc[entry_num] = {'start_loc': entry['start_loc'],
-                                                        'geo_stats_start_loc': comp_ratios_start_loc}
+                # TODO: Record any other information that may be pertinent to analyzing Fuzzy string comparison.
+                failed_mappings_start_loc[entry_num] = {
+                    'entry_num': entry_num,
+                    'start_loc': entry['start_loc'],
+                    'geo_stats': comp_ratios_start_loc
+                }
                 validated_journal[entry_num]['start_loc'] = None
             else:
                 # The user entered start_location was mapped.
@@ -185,29 +193,36 @@ class HikerValidator(object):
 
             if validated_entry['dest'] is None:
                 # The user entered destination location could not be mapped.
-                failed_mappings_dest_loc[entry_num] = {'dest': entry['dest'],
-                                                       'geo_stats_dest_loc': comp_ratios_dest_loc}
+                # TODO: Record any other information that may be pertinent to analyzing Fuzzy string comparison.
+                failed_mappings_dest_loc[entry_num] = {
+                    'entry_num': entry_num,
+                    'dest': entry['dest'],
+                    'geo_stats': comp_ratios_dest_loc
+                }
                 validated_journal[entry_num]['dest'] = None
             else:
                 # The user entered destination location was mapped.
                 validated_journal[entry_num]['dest'] = validated_entry['dest']
 
-        if validation_stats:
-            # TODO: Compute additional statistics.
-            '''
-            self.geovalidation_stats = {
-                'unvalidated_journal': unvalidated_journal,
-                'validated_journal': validated_journal
+        if self.stats:
+            # TODO: Compute additional hiker statistics.
+            geocode_stats = {
+                'hiker_id': hiker['identifier'],
+                'USLS': failed_mappings_start_loc,
+                'UDLS': validated_journal,
+                'num_unvalidated': len(failed_mappings_start_loc) + len(failed_mappings_dest_loc),
+                'num_validated': len(validated_journal),
             }
-            '''
-        return (validated_journal, journal_mapping_statistics)
+        else:
+            geocode_stats = None
+        return (validated_journal, geocode_stats)
 
     """
     write_validated_hiker -Writes a geocoded hiker to the specified storage directory in json format.
     :param hiker -The deserialized hiker object read from the json file and mapped.
     """
     def write_validated_hiker(self, hiker):
-        validated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/HikerData/ValidatedHikers"
+        validated_hikers_data_path = self.storage_location + "/HikerData/ValidatedHikers/"
         hiker_id = hiker['identifier']
         with open(validated_hikers_data_path + "/" + str(hiker_id) + ".json", 'w') as fp:
             json.dump(hiker, fp=fp)
@@ -251,20 +266,25 @@ def get_validated_places(validated_places_path):
 main -Main method for hiker validation. Goes through every unvalidated hiker and maps their location to an entry in the
     AT Shelters database.
 """
-def main(stats=False):
-    unvalidated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/HikerData/UnvalidatedHikers/"
-    validated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/HikerData/ValidatedHikers/"
-    validated_shelter_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/TrailShelters/"
+def main(stats=False,num_hikers_to_map=None):
+    unvalidated_hikers_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'Data/HikerData/UnvalidatedHikers/'))
+    validated_hikers_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'Data/HikerData/ValidatedHikers/'))
+    validated_shelter_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'Data/TrailShelters/'))
+    geocoding_stats = {}
+    num_hikers = 0
 
     # Go through the list of unvalidated hikers and validate.
     for filename in os.listdir(unvalidated_hikers_data_path):
+        if num_hikers_to_map:
+            if num_hikers == num_hikers_to_map:
+                break
         # If the hiker has already been validated, don't re-validate.
         if filename not in os.listdir(validated_hikers_data_path):
             # Load the unvalidated json file into memory.
             with open(unvalidated_hikers_data_path + "/" + filename, 'r') as fp:
                 hiker = json.load(fp=fp)
             # Load the validated AT shelters into memory:
-            validated_shelters = get_validated_shelters(validated_shelters_path=validated_shelter_data_path + "newShelters.csv")
+            validated_shelters = get_validated_shelters(validated_shelters_path=validated_shelter_data_path + "/newShelters.csv")
             # TODO: Load validated hostels into memory:
             # validated_hostels = get_validated_hostels(validated_hostels_path=validated_shelter_data_path + "/validated_hostels.csv")
             # TODO: Load validated places (that are not recognized shelters or hostels) into memory:
@@ -273,15 +293,24 @@ def main(stats=False):
             # TODO: Validate using hostels, shelters, and places; not just shelters.
             # Instantiate validator object.
             validator = HikerValidator(validated_shelters=validated_shelters,
-                                       validated_hostels=None, validated_places=None)
+                                       validated_hostels=None, validated_places=None, statistics=stats)
             # Execute shelter validation.
-            validated_journal = validator.validate_shelters(hiker)
+            validated_journal, geovalidation_stats = validator.validate_shelters(hiker)
+            # If the statistics flag was set to true during instantiation, retrieve the computed statistics:
+            if stats:
+                geocoding_stats[hiker['identifier']] = geovalidation_stats
             # If there are any successfully mapped journal entries, write them to validated hikers.
             if len(validated_journal) > 0:
                 validator.write_validated_hiker(hiker)
+            num_hikers += 1
         else:
             print("Hiker %s Has Already ben Validated." % filename)
 
+    # If geocoding statistics are requested then perform analysis
+    if stats:
+        print(geocoding_stats)
+
 if __name__ == '__main__':
     stats = True
-    main(stats)
+    num_hikers_to_map = 1
+    main(stats=stats,num_hikers_to_map=num_hikers_to_map)
