@@ -230,31 +230,31 @@ def compute_geocoding_stats(validated_journals, geocoding_statistics):
         'num_unvalid_udl': 0,
         'frequency_udl': {}
     }
+
     for hiker_id, journal in validated_journals.items():
-        for entry_num,entry in journal:
+        for entry_num,entry in journal.items():
             if entry['start_loc'] is not None:
                 statistics['num_valid_sl'] += 1
             if entry['dest'] is not None:
                 statistics['num_valid_udl'] += 1
-
-    if geocoding_statistics['USLS'] is not None:
-        for entry_num,USL in geocoding_statistics['USLS'].items():
-            if statistics['frequency_usl'][USL['start_loc']] is None:
-                statistics['frequency_usl'][USL['start_loc']] = 0
+    if geocoding_statistics is not None:
+        for hiker_id,geo_stats in geocoding_statistics.items():
+            if geo_stats['UDLS']:
+                for entry_num,USL in geo_stats['USLS'].items():
+                    if USL['start_loc'] not in statistics['frequency_usl']:
+                        statistics['frequency_usl'][USL['start_loc']] = 0
+                    else:
+                        statistics['frequency_usl'][USL['start_loc']] += 1
+                statistics['num_unvalid_usl'] += len(geo_stats['USLS'])
+            if geo_stats['UDLS']:
+                for entry_num,UDL in geo_stats['UDLS'].items():
+                    if UDL['dest'] not in statistics['frequency_udl']:
+                        statistics['frequency_udl'][UDL['dest']] = 0
+                    else:
+                        statistics['frequency_udl'][UDL['dest']] += 1
+                statistics['num_unvalid_udl'] += len(geo_stats['UDLS'])
             else:
-                statistics['frequency_usl'][USL['start_loc']] += 1
-        statistics['num_unvalid_usl'] = len(geocoding_statistics['USLS'])
-    else:
-        pass
-    if geocoding_statistics['UDLS'] is not None:
-        for entry_num,UDL in geocoding_statistics['UDLS'].items():
-            if statistics['frequency_udl'][UDL['dest']] is None:
-                statistics['frequency_udl'][UDL['dest']] = 0
-            else:
-                statistics['frequency_udl'][UDL['dest']] += 1
-        statistics['num_unvalid_udl'] = len(geocoding_statistics['UDLS'])
-    else:
-        pass
+                pass
     return statistics
 
 """
@@ -274,7 +274,7 @@ def main(stats=False, num_hikers_to_map=None):
     # Go through the list of unvalidated hikers and validate.
     for filename in os.listdir(unvalidated_hikers_data_path):
         if num_hikers_to_map:
-            if num_hikers == num_hikers_to_map:
+            if num_hikers > num_hikers_to_map:
                 break
         # If the hiker has already been validated, don't re-validate.
         if filename not in os.listdir(validated_hikers_data_path):
@@ -303,13 +303,11 @@ def main(stats=False, num_hikers_to_map=None):
                 validator.write_validated_hiker(hiker)
             num_hikers += 1
         else:
-            print("Hiker %s Has Already ben Validated." % filename)
+            print("Hiker %s Has Already been Validated." % filename)
 
     # If geocoding statistics are requested then perform analysis
     if stats:
         statistics = compute_geocoding_stats(validated_journals, geocoding_stats)
 
 if __name__ == '__main__':
-    stats = True
-    num_hikers_to_map = 3
-    main(stats=stats,num_hikers_to_map=num_hikers_to_map)
+    main(stats=True,num_hikers_to_map=3)
