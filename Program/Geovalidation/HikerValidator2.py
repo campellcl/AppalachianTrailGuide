@@ -308,7 +308,6 @@ def main(stats=False, num_hikers_to_map=None):
     # If geocoding statistics are requested then perform analysis
     if stats:
         statistics = compute_geocoding_stats(validated_journals, geocoding_stats)
-        print(statistics)
 
 if __name__ == '__main__':
     stats = True
