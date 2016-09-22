@@ -35,10 +35,10 @@ def main():
     shelters_no_duplicates = remove_duplicates(shelters=shelters)
     write_data(shelters_no_duplicates)
 
-def mt_to_mountain(original_name):
+def mt_to_mount(original_name):
     if "Mt." in original_name:
-        new_name = original_name.replace("Mt.", "Mountain")
-    return new_name
+        original_name = original_name.replace("Mt", "Mount")
+    return original_name
 
 
 """
