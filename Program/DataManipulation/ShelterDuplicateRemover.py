@@ -15,17 +15,17 @@ main -Goes through every shelter in the AT_Shelters_Combined dataset and removes
 """
 def main():
     filename = "AT Shelters Combined.csv"
-    storage_dir = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/TrailShelters/"
+    storage_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'Data/TrailShelters/'))
     cwd = os.getcwd()
     shelters = collections.OrderedDict()
-    with open(storage_dir + filename, 'r') as fp:
+    with open(storage_dir + "/" +filename, 'r') as fp:
         line_num = 0
         for line in iter(fp):
             if line_num != 0:
                 read_data = line.split(",")
                 shelters[line_num] = {
                     'SID': line_num,
-                    'name': read_data[0],
+                    'name': mt_to_mount(read_data[0]),
                     'data_set': read_data[1],
                     'lat': float(read_data[2]),
                     'lon': float(read_data[3]),
@@ -34,6 +34,12 @@ def main():
             line_num += 1
     shelters_no_duplicates = remove_duplicates(shelters=shelters)
     write_data(shelters_no_duplicates)
+
+def mt_to_mountain(original_name):
+    if "Mt." in original_name:
+        new_name = original_name.replace("Mt.", "Mountain")
+    return new_name
+
 
 """
 remove_duplicates -Finds and removes duplicate shelters in the dataset by utilizing two comparisions for equality:
@@ -81,8 +87,8 @@ def remove_duplicates(shelters):
     return shelters_no_duplicates
 
 def write_data(shelters_no_duplicates):
-    storage_location = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/TrailShelters/"
-    new_shelters_csv = open(storage_location + "newShelters.csv", 'w')
+    storage_location = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'Data/TrailShelters/'))
+    new_shelters_csv = open(storage_location + "/" + "newShelters.csv", 'w')
     new_shelters_csv.write("SID,name,data_set,lat,lon,shelter_type\n")
     sid = 0
     for key,value in shelters_no_duplicates.items():
