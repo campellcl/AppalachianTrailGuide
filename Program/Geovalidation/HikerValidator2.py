@@ -137,7 +137,7 @@ class HikerValidator(object):
 
         for entry_num, entry in unvalidated_journal.items():
             validated_entry = self.validate_entry(
-                user_start_loc=entry['start_loc'], user_dest_loc=entry['dest'], comparison_threshold=90)
+                user_start_loc=mt_to_mountain(entry['start_loc']), user_dest_loc=mt_to_mountain(entry['dest']), comparison_threshold=90)
 
             validated_journal[entry_num] = copy.deepcopy(entry)
             if validated_entry['start_loc'] is None:
@@ -220,6 +220,15 @@ def get_validated_hostels(validated_hostels_path):
 """
 def get_validated_places(validated_places_path):
     pass
+
+def mt_to_mountain(original_name):
+    if (original_name is not None):
+        if "Mt" in original_name:
+            original_name = original_name.replace("Mt.", "Mount")
+        if "Mtn" in original_name:
+            original_name = original_name.replace("Mtn", "Mountain")
+    return original_name
+
 
 def compute_geocoding_stats(validated_journals, geocoding_statistics):
     statistics = {
@@ -310,4 +319,4 @@ def main(stats=False, num_hikers_to_map=None):
         statistics = compute_geocoding_stats(validated_journals, geocoding_stats)
 
 if __name__ == '__main__':
-    main(stats=True,num_hikers_to_map=3)
+    main(stats=True,num_hikers_to_map=1)
