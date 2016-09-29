@@ -139,15 +139,15 @@ class HikerValidator(object):
             validated_entry = self.validate_entry(
                 user_start_loc=entry['start_loc'], user_dest_loc=entry['dest'], comparison_threshold=90)
 
-            validated_journal[entry_num] = copy.deepcopy(entry)
             if validated_entry['start_loc'] is None:
                 # The user entered start_location could not be mapped.
                 # TODO: Record any other information that may be pertinent to analyzing Fuzzy string comparison.
                 failed_mappings_start_loc[entry_num] = {
                     'start_loc': entry['start_loc']
                 }
-                validated_journal[entry_num]['start_loc'] = None
             else:
+                # Copy the hiker information into the validated journals dict.
+                validated_journal[entry_num] = copy.deepcopy(entry)
                 # The user entered start_location was mapped.
                 validated_journal[entry_num]['start_loc'] = validated_entry['start_loc']
 
@@ -157,9 +157,17 @@ class HikerValidator(object):
                 failed_mappings_dest_loc[entry_num] = {
                     'dest': entry['dest']
                 }
-                validated_journal[entry_num]['dest'] = None
+                if entry_num in validated_journal:
+                    # TODO: Should we use None or 'None'?
+                    validated_journal[entry_num]['dest'] = None
             else:
                 # The user entered destination location was mapped.
+                # Check to see if the start_loc was mapped and this entry has already been copied to the dict.
+                if entry_num not in validated_journal:
+                    # The validated destination was mapped but start_loc was not.
+                    validated_journal[entry_num] = copy.deepcopy(entry)
+                    # TODO: Should we use None or 'None'?
+                    validated_journal[entry_num]['start_loc'] = None
                 validated_journal[entry_num]['dest'] = validated_entry['dest']
 
         if self.stats:
@@ -179,12 +187,12 @@ class HikerValidator(object):
     write_validated_hiker -Writes a geocoded hiker to the specified storage directory in json format.
     :param hiker -The deserialized hiker object read from the json file and mapped.
     """
-    def write_validated_hiker(self, hiker):
+    def write_validated_hiker(self, hiker, validated_journal):
         validated_hikers_data_path = self.storage_location + "/HikerData/ValidatedHikers/"
         # validated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/HikerData/ValidatedHikers"
         hiker_id = hiker['identifier']
         with open(validated_hikers_data_path + str(hiker_id) + ".json", 'w') as fp:
-            json.dump(hiker, fp=fp)
+            json.dump(validated_journal, fp=fp)
 
 """
 get_validated_shelters -Returns a dictionary of the shelters validated using the combined TNL and ATC data sets.
@@ -300,7 +308,7 @@ def main(stats=False, num_hikers_to_map=None):
             # If there are any successfully mapped journal entries, write them to validated hikers.
             if len(validated_journal) > 0:
                 validated_journals[hiker['identifier']] = validated_journal
-                validator.write_validated_hiker(hiker)
+                validator.write_validated_hiker(hiker, validated_journal)
             num_hikers += 1
         else:
             print("Hiker %s Has Already been Validated." % filename)
