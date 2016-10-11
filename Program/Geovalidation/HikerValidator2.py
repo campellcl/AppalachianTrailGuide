@@ -318,4 +318,4 @@ def main(stats=False, num_hikers_to_map=None):
         statistics = compute_geocoding_stats(validated_journals, geocoding_stats)
 
 if __name__ == '__main__':
-    main(stats=True,num_hikers_to_map=3)
+    main(stats=True,num_hikers_to_map=None)
