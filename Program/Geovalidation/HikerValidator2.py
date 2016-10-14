@@ -17,9 +17,8 @@ class HikerValidator(object):
     HikerValidator(object) -Wrapper for ShelterValidator, HostelValidator, and GeoValidator. Maps a hiker's entered
         locations to validated GPS coordinates in the appropriate data sets.
     :Author: Chris Campell
-    :Version: 9/14/2016
+    :Version: 10/14/2016
     """
-    # TODO: Declare data structure to hold statistics for each hiker
 
     """
     __init__ -Constructor for objects of type HikerValidator.
@@ -39,23 +38,24 @@ class HikerValidator(object):
             self.geocode_stats = {}
 
     """
-    validate_entry_locations -Takes a hiker journal entry and attempts to map the provided
-        start_loc and dest to a validated shelter in the AT Shelters data set.
+    validate_entry_locations -Takes a hiker journal entry and attempts to map the user-provided
+        start_loc and dest to a validated shelter in the AT Shelters data set. The mapping is performed via
+        fuzzy string comparison; and returns the most likely match greater than the specified comparison_threshold.
     :param unvalidated_start_loc: The user entered string for their starting location.
     :param unvalidated_dest: The user entered string for their destination location.
     :param comparison_threshold: The threshold by which a match is considered valid during fuzzy string comparison.
-    :returns (comp_ratios_usl, comp_ratios_ud): The top three fuzzy string comparisons greater than the
-            comparsion_threshold for both start_location and destination.
-        :return comp_ratios_usl: The top three matching shelter strings for start_location as determined by
-                fuzzy string comparison.
-        :return comp_ratios_ud: The top three matching shelter strings for destination as determined by
-                fuzzy string comparison.
+    :returns (usl_assoc_sid, udl_assoc_sid):
+        :return usl_assoc_sid: The unique shelter identifier (SID) of the mapped shelter with the highest comparison
+            ratio to the user-entered start location during fuzzy string comparison. If the shelter with the highest
+            comparison ratio is below the specified comparsion_threshold, then None is returned.
+        :return udl_assoc_sid: The unique shelter identifier (SID) of the mapped shelter with the highest comparsion
+            ratio to the user-entered destiation location during fuzzy string comparison. If the shelter with the
+            highest comparison ratio is below the specified comparison_threshold, then None is returned.
     """
     def validate_entry_locations(self, unvalidated_start_loc, unvalidated_dest, comparison_threshold=90):
         # If the user didn't enter any text then there can be no geovalidation.
         if unvalidated_start_loc is None and unvalidated_dest is None:
-            return (None, None)
-
+            return None, None
         max_comp_ratio_usl = -1
         usl_assoc_sid = None
         max_comp_ratio_udl = -1
@@ -80,16 +80,11 @@ class HikerValidator(object):
         return (usl_assoc_sid, udl_assoc_sid)
 
     """
-    validate_entry -Maps an unvalidated hiker's trail journal entry to a validated entry in one of the data sets.
+    validate_entry -Maps an unvalidated hiker's trail journal entry to a geo-validated entry.
     :param user_start_loc: The start location from the trail journal entry to be mapped to a GPS location.
     :param user_dest_loc: The destination location from the trail journal entry to be mapped to a GPS location.
-    :returns (validated_entry, comp_ratios_start_loc, comp_ratios_dest_loc):
-        :return validated_entry: The now mapped/validated user_start_location and user_destination_location; returns
-            None for key 'start_loc' if not mappable, and None for key 'dest' if not mappable.
-        :return comp_ratios_start_loc: The top three results and their associated comparision ratios from the geocoding
-            fuzzy string comparision process for the user's starting location.
-        :return comp_ratios_dest_loc: The top three results and their associated comparision ratios fromt he geocoding
-            fuzzy string comparison process for the user's destination location.
+    :return validated_entry: The now mapped/validated user_start_location and user_destination_location; returns
+        None for key 'start_loc' if not mappable, and None for key 'dest' if not mappable.
     """
     def validate_entry(self, user_start_loc, user_dest_loc, comparison_threshold=90):
         validated_entry = {}
@@ -97,7 +92,7 @@ class HikerValidator(object):
         usl_assoc_sid, udl_assoc_sid = self.validate_entry_locations(
             unvalidated_start_loc=user_start_loc, unvalidated_dest=user_dest_loc, comparison_threshold=comparison_threshold)
 
-        # Determine if geovalidation was successful for the start_location
+        # Determine if geo-validation was successful for the start_location
         if usl_assoc_sid is not None and usl_assoc_sid != -1:
             validated_entry['start_loc'] = {
                 'shelter_name': self.validated_shelters[usl_assoc_sid]['name'],
@@ -318,4 +313,4 @@ def main(stats=False, num_hikers_to_map=None):
         statistics = compute_geocoding_stats(validated_journals, geocoding_stats)
 
 if __name__ == '__main__':
-    main(stats=True,num_hikers_to_map=None)
+    main(stats=True, num_hikers_to_map=None)
