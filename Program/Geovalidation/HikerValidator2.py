@@ -88,7 +88,7 @@ class HikerValidator(object):
     """
     def validate_entry(self, user_start_loc, user_dest_loc, comparison_threshold=90):
         validated_entry = {}
-        # Get the three best results for geocoded solutions for both start_loc and destination.
+        # Get the best results for geocoded solutions for both start_loc and destination.
         usl_assoc_sid, udl_assoc_sid = self.validate_entry_locations(
             unvalidated_start_loc=user_start_loc, unvalidated_dest=user_dest_loc, comparison_threshold=comparison_threshold)
 
@@ -186,8 +186,9 @@ class HikerValidator(object):
         validated_hikers_data_path = self.storage_location + "/HikerData/ValidatedHikers/"
         # validated_hikers_data_path = "C:/Users/Chris/Documents/GitHub/AppalachianTrailGuide/Data/HikerData/ValidatedHikers"
         hiker_id = hiker['identifier']
+        hiker['journal'] = validated_journal
         with open(validated_hikers_data_path + str(hiker_id) + ".json", 'w') as fp:
-            json.dump(validated_journal, fp=fp)
+            json.dump(hiker, fp=fp)
 
 """
 get_validated_shelters -Returns a dictionary of the shelters validated using the combined TNL and ATC data sets.
