@@ -52,3 +52,4 @@ Temporary Items
 # Directories containing large amounts of data (too big for github)
 /Data/HikerData/UnvalidatedHikers/*
 /Data/HikerData/ValidatedHikers/*
+/Data/HikerData/VHDistancePrediction/*
