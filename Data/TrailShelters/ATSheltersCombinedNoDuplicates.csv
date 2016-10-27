@@ -1,9 +1,6 @@
 SID,name,data_set,lat,lon,shelter_type
 37,Double Spring Gap Shelter,TNL,35.56527,-83.54274,Shelter
-42,Winturri,ATC,43.66221,-72.622433,Other
-77,Caughnawaga Shelter,TNL,43.01497,-73.04363,Shelter
 102,James Fry Shelter,TNL,40.06295,-77.20611,Shelter
-268,Little Bigelow Lean-to,TNL,45.13917,-70.19115,Lean-to
 1,Black Gap Shelter,TNL,34.61768,-84.19871,Shelter
 2,Springer Mountain Shelter,TNL,34.62946,-84.19268,Shelter
 3,Stover Creek Shelter,TNL,34.64906,-84.20009,Shelter
@@ -259,33 +256,34 @@ SID,name,data_set,lat,lon,shelter_type
 254,Gentian Pond Campsite Shelter,TNL,44.4518,-71.06938,Shelter
 255,Carlo Col,ATC,44.488704,-71.016735,Log
 256,Full Goose,ATC,44.525252,-70.9814,Log w/siding
-258,Speck Pond Shelter,TNL,44.56469,-70.97362,Shelter
-259,Baldpate Lean-to,TNL,44.59842,-70.91167,Lean-to
-260,Frye Notch Lean-to,TNL,44.62791,-70.89983,Lean-to
-261,Hall Mountain Lean-to,TNL,44.70079,-70.82473,Lean-to
-262,Bemis Mountain Lean-to,TNL,44.81018,-70.75588,Lean-to
-263,Sabbath Day Pond Lean-to,TNL,44.84094,-70.66212,Lean-to
-264,Piazza Rock Lean-to,TNL,44.90418,-70.53004,Lean-to
-265,Poplar Ridge Lean-to,TNL,44.97,-70.44534,Lean-to
-266,Spaulding Mountain Lean-to,TNL,44.99577,-70.34134,Lean-to
-267,Horns Pond Lean-to (west),ATC,45.14393,-70.33022,Log/Lumber
-269,West Carry Pond Lean-to,TNL,45.15803,-70.09977,Lean-to
-270,Pierce Pond Lean-to,TNL,45.24025,-70.05548,Lean-to
-271,Pleasant Pond Lean-to,TNL,45.27119,-69.91675,Lean-to
-272,Bald Mountain Brook Lean-to,TNL,45.25854,-69.79947,Lean-to
-273,Moxie Bald Lean-to,TNL,45.27068,-69.74534,Lean-to
-274,Horseshoe Canyon Lean-to,TNL,45.28274,-69.62759,Lean-to
-275,Leeman Brook Lean-to,TNL,45.35151,-69.49877,Lean-to
-276,Wilson Valley Lean-to,TNL,45.39873,-69.45921,Lean-to
-277,Long Pond Stream Lean-to,TNL,45.4211,-69.4096,Lean-to
-278,Cloud Pond Lean-to,TNL,45.41804,-69.35322,Lean-to
-279,Chairback Gap Lean-to,TNL,45.45311,-69.26174,Lean-to
-280,Carl A. Newhall Lean-to,TNL,45.53106,-69.31513,Lean-to
-281,Logan Brook Lean-to,TNL,45.5609,-69.23512,Lean-to
-282,East Branch Lean-to,TNL,45.59676,-69.19816,Lean-to
-283,Cooper Brook Falls Lean-to,TNL,45.6405,-69.0874,Lean-to
-284,Potaywadjo Spring Lean-to,TNL,45.70653,-69.00738,Lean-to
-285,Wadleigh Stream Lean-to,TNL,45.74702,-69.14447,Lean-to
-286,Rainbow Stream Lean-to,TNL,45.79906,-69.17041,Lean-to
-287,Hurd Brook Lean-to,TNL,45.81852,-69.01847,Lean-to
-288,The Birches Shelters,TNL,45.88675,-68.99905,Shelter
+257,Speck Pond Shelter,TNL,44.56469,-70.97362,Shelter
+258,Baldpate Lean-to,TNL,44.59842,-70.91167,Lean-to
+259,Frye Notch Lean-to,TNL,44.62791,-70.89983,Lean-to
+260,Hall Mountain Lean-to,TNL,44.70079,-70.82473,Lean-to
+261,Bemis Mountain Lean-to,TNL,44.81018,-70.75588,Lean-to
+262,Sabbath Day Pond Lean-to,TNL,44.84094,-70.66212,Lean-to
+263,Piazza Rock Lean-to,TNL,44.90418,-70.53004,Lean-to
+264,Poplar Ridge Lean-to,TNL,44.97,-70.44534,Lean-to
+265,Spaulding Mountain Lean-to,TNL,44.99577,-70.34134,Lean-to
+266,Horns Pond Lean-to (west),ATC,45.14393,-70.33022,Log/Lumber
+267,Little Bigelow Lean-to,TNL,45.13917,-70.19115,Lean-to
+268,West Carry Pond Lean-to,TNL,45.15803,-70.09977,Lean-to
+269,Pierce Pond Lean-to,TNL,45.24025,-70.05548,Lean-to
+270,Pleasant Pond Lean-to,TNL,45.27119,-69.91675,Lean-to
+271,Bald Mountain Brook Lean-to,TNL,45.25854,-69.79947,Lean-to
+272,Moxie Bald Lean-to,TNL,45.27068,-69.74534,Lean-to
+273,Horseshoe Canyon Lean-to,TNL,45.28274,-69.62759,Lean-to
+274,Leeman Brook Lean-to,TNL,45.35151,-69.49877,Lean-to
+275,Wilson Valley Lean-to,TNL,45.39873,-69.45921,Lean-to
+276,Long Pond Stream Lean-to,TNL,45.4211,-69.4096,Lean-to
+277,Cloud Pond Lean-to,TNL,45.41804,-69.35322,Lean-to
+278,Chairback Gap Lean-to,TNL,45.45311,-69.26174,Lean-to
+279,Carl A. Newhall Lean-to,TNL,45.53106,-69.31513,Lean-to
+280,Logan Brook Lean-to,TNL,45.5609,-69.23512,Lean-to
+281,East Branch Lean-to,TNL,45.59676,-69.19816,Lean-to
+282,Cooper Brook Falls Lean-to,TNL,45.6405,-69.0874,Lean-to
+283,Potaywadjo Spring Lean-to,TNL,45.70653,-69.00738,Lean-to
+284,Wadleigh Stream Lean-to,TNL,45.74702,-69.14447,Lean-to
+285,Rainbow Stream Lean-to,TNL,45.79906,-69.17041,Lean-to
+286,Hurd Brook Lean-to,TNL,45.81852,-69.01847,Lean-to
+287,The Birches Shelters,TNL,45.88675,-68.99905,Shelter
