@@ -286,7 +286,7 @@ def main(stats=False, num_hikers_to_map=None):
             with open(unvalidated_hikers_data_path + "/" + filename, 'r') as fp:
                 hiker = json.load(fp=fp)
             # Load the validated AT shelters into memory:
-            validated_shelters = get_validated_shelters(validated_shelters_path=validated_shelter_data_path + "/newShelters.csv")
+            validated_shelters = get_validated_shelters(validated_shelters_path=validated_shelter_data_path + "/ATSheltersCombinedNoDuplicates.csv")
             # TODO: Load validated hostels into memory:
             # validated_hostels = get_validated_hostels(validated_hostels_path=validated_shelter_data_path + "/validated_hostels.csv")
             # TODO: Load validated places (that are not recognized shelters or hostels) into memory:
