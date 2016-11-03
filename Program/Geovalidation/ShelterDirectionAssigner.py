@@ -15,7 +15,7 @@ from collections import OrderedDict
 """
 assign_shelter_directions -Goes through every shelter in the hiker's validated trail journal and assigns a direction of
     travel. Each shelter has an associated direction of travel corresponding to the start_loc of the following entry.
-    If the entry has no following entry, the direction is set to undetermined 'U'.
+    If the entry has no following entry, the direction is set to undetermined 'UD'.
 :param validated_hiker_trail_journal: The hiker's geovalidated trail journal.
 :return validated_hiker_journal: The validated hiker journal with hiker direction now recorded for each shelter.
 """
@@ -26,20 +26,20 @@ def assign_shelter_directions(validated_hiker_journal):
         print("enum1: %s" % enum1)
         print("enum2: %s" % enum2)
     '''
-    # The first shelter will have no associated direction of travel.
-    first_enum = list(validated_hiker_journal.keys())[0]
-    validated_hiker_journal[first_enum]['start_loc']['dir'] = "UD"
+    # The last shelter will have no associated direction of travel.
+    last_enum = list(validated_hiker_journal.keys())[len(list(validated_hiker_journal.keys())) - 1]
+    validated_hiker_journal[last_enum]['start_loc']['dir'] = "UD"
     for enum1, enum2 in zip(validated_hiker_journal.keys(), list(validated_hiker_journal.keys())[1:]):
         # print("enum1: %s" % enum1)
         # print("enum2: %s" % enum2)
         shelter_one = validated_hiker_journal[enum1]['start_loc']
         shelter_two = validated_hiker_journal[enum2]['start_loc']
         if int(shelter_two['SID']) < int(shelter_one['SID']):
-            validated_hiker_journal[enum2]['start_loc']['dir'] = "S"
+            validated_hiker_journal[enum1]['start_loc']['dir'] = "S"
         elif int(shelter_two['SID']) > int(shelter_one['SID']):
-            validated_hiker_journal[enum2]['start_loc']['dir'] = "N"
+            validated_hiker_journal[enum1]['start_loc']['dir'] = "N"
         elif int(shelter_two['SID']) == int(shelter_one['SID']):
-            validated_hiker_journal[enum2]['start_loc']['dir'] = "UD"
+            validated_hiker_journal[enum1]['start_loc']['dir'] = "UD"
         else:
             print("Cardinal Direction Between SID #%d and SID #%d was incalculable!"
                   % (shelter_one['SID'], shelter_two['SID']))
