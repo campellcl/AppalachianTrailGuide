@@ -1,6 +1,4 @@
 SID,name,data_set,lat,lon,shelter_type
-37,Double Spring Gap Shelter,TNL,35.56527,-83.54274,Shelter
-102,James Fry Shelter,TNL,40.06295,-77.20611,Shelter
 1,Black Gap Shelter,TNL,34.61768,-84.19871,Shelter
 2,Springer Mountain Shelter,TNL,34.62946,-84.19268,Shelter
 3,Stover Creek Shelter,TNL,34.64906,-84.20009,Shelter
@@ -37,6 +35,7 @@ SID,name,data_set,lat,lon,shelter_type
 34,Spence Field,ATC,35.561784,-83.732667,Stone/Log
 35,Derrick Knob Shelter,TNL,35.56635,-83.64179,Shelter
 36,Silers Bald,ATC,35.564263,-83.568248,Stone/Log
+37,Double Spring Gap Shelter,TNL,35.56527,-83.54274,Shelter
 38,Mount Collins,ATC,35.593923,-83.47107,Stone
 39,Icewater Spring,ATC,35.629756,-83.38628,Stone/Log
 40,Pecks Corner Shelter,TNL,35.65083,-83.30848,Shelter
