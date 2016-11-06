@@ -77,6 +77,25 @@ def clean_hiker_journal(sorted_hiker_journal):
                 cleaned_hiker_journal[enum] = entry
     return cleaned_hiker_journal
 
+def clean_hiker_journal_dates(clean_sorted_hiker_journal):
+    """
+    clean_hiker_journal_dates -Takes a geo-validated and sorted (chronologically by entry number) hiker trail journal,
+        and removes any entries with unvalidated start_locations. After cleaning, only journal entries with a
+        valid date remain.
+    :param clean_sorted_hiker_journal: A geo-validated and sorted (chronologically by entry number) hiker trail journal.
+    :return cleaned_hiker_journal: The same hiker journal as provided, with entries containing non-valid dates removed.
+    """
+    cleaned_hiker_journal = OrderedDict()
+    for enum, entry in clean_sorted_hiker_journal.items():
+        if not entry['date']:
+            pass
+        else:
+            if entry['date'] == '':
+                pass
+            else:
+                cleaned_hiker_journal[enum] = entry
+    return cleaned_hiker_journal
+
 """
 main -Main method for ShelterDirectionAssigner, goes through every validated hiker and retrieves only the
     journal entries with valid starting locations. Those journal entries are assigned a direction of travel.
@@ -94,22 +113,25 @@ def main():
                 sorted_hiker_journal = sort_hiker_journal(hiker['journal'])
                 # For the sake of distance predictions, remove any journal entries that contain no valid start location:
                 cleaned_hiker_journal = clean_hiker_journal(sorted_hiker_journal)
+                # For the sake of distance predictions, remove any journal entries with no valid date:
+                cleaned_hiker_journal = clean_hiker_journal_dates(cleaned_hiker_journal)
                 # Ensure that there is at least two shelters in the cleaned journal, else discard the hiker as we can't determine the direction.
                 if cleaned_hiker_journal:
-                    # Assign direction of travel to each shelter:
-                    updated_hiker_journal = assign_shelter_directions(cleaned_hiker_journal)
-                    # Updated the hiker's journal
-                    hiker['journal'] = updated_hiker_journal
-                    # Delete the direction associated with the hiker (it is now associated with the shelter).
-                    try:
-                       dir = hiker['dir']
-                       del hiker['dir']
-                    except KeyError:
-                        pass
-                    # Write the updated journal to the ATG/Data/HikerData/VHDistancePrediction directory:
-                    storage_location = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'Data/HikerData/VHDistancePrediction/'))
-                    with open(storage_location + "/" + filename, 'w') as fp2:
-                        json.dump(hiker, fp=fp2)
+                    if len(cleaned_hiker_journal) > 1:
+                        # Assign direction of travel to each shelter:
+                        updated_hiker_journal = assign_shelter_directions(cleaned_hiker_journal)
+                        # Updated the hiker's journal
+                        hiker['journal'] = updated_hiker_journal
+                        # Delete the direction associated with the hiker (it is now associated with the shelter).
+                        try:
+                           dir = hiker['dir']
+                           del hiker['dir']
+                        except KeyError:
+                            pass
+                        # Write the updated journal to the ATG/Data/HikerData/VHDistancePrediction directory:
+                        storage_location = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'Data/HikerData/VHDistancePrediction/'))
+                        with open(storage_location + "/" + filename, 'w') as fp2:
+                            json.dump(hiker, fp=fp2)
 
 if __name__ == '__main__':
     main()
