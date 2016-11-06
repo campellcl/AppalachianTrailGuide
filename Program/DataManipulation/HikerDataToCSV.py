@@ -59,68 +59,49 @@ def write_csv_shelter_entry(csv_header, journal_entry_string, entry_num, journal
     """
     # Go through every hikers journal; extracting each journal entry.
     # The hiker journal entries in directory VHDistancePrediction must have at least one valid start_loc.
-    for i in range(len(csv_header)):
-        if i == len(csv_header) - 1:
-            # Entry is the last in the csv row.
-            if journal_entry['start_loc']['SID'] + journal_entry['start_loc']['dir'] == csv_header[i]:
-                # The entry for the start_loc matches the column header.
-                journal_entry_string += "1,"
-            else:
-                # The entry for the start_loc does not match the column header.
-                journal_entry_string += "0,"
-            print("journal entry string length: %d" % len(journal_entry_string.split(",")))
-            break
+    for i in range(2, len(csv_header) - 6):
+        if journal_entry['start_loc']['SID'] + journal_entry['start_loc']['dir'] == csv_header[i]:
+            # The entry for the start_loc matches the column header.
+            journal_entry_string += "1,"
         else:
-            # Entry is not the last in the csv.
-            if journal_entry['start_loc']['SID'] + journal_entry['start_loc']['dir'] == csv_header[i]:
-                # The entry for the start_loc matches the column header.
-                journal_entry_string += "1,"
-            else:
-                # The entry for the start_loc does not match the column header.
-                journal_entry_string += "0,"
+            # The entry for the start_loc does not match the column header.
+            journal_entry_string += "0,"
     return journal_entry_string
 
-def write_csv_delta_trip_miles(journal_entry_string_one, journal_entry_string_two):
+def get_delta_trip_miles(journal_entry_one, journal_entry_two):
     """
-    write_csv_delta_trip_miles -Given two journal strings, computes the delta trip miles between the two and appends
-        the change in mileage to the first journal entry string.
-    :param journal_entry_string_one: A string to be written to the csv for distance prediction.
-    :param journal_entry_string_two: A journal entry string to be written to the csv for distance prediction.
-    :return journal_entry_string_one: The provided journal entry string with the appended change in mileage.
+    get_delta_trip_miles -Returns the elapsed difference in mileage between journal entries.
+    :param journal_entry_one: The first journal entry.
+    :param journal_entry_two: The next chronological journal entry.
+    :return delta_mileage: The elapsed trip mileage between journal entry one and two.
     """
-    journal_one_entries = journal_entry_string_one.split(",")
-    journal_one_trip_mileage = float(journal_one_entries[len(journal_one_entries) - 3])
-    journal_two_entries = journal_entry_string_two.split(",")
-    journal_two_trip_mileage = float(journal_two_entries[len(journal_two_entries) - 3])
-    journal_entry_string_one += str(journal_two_trip_mileage - journal_one_trip_mileage) + ","
-    return journal_entry_string_one
+    return journal_entry_two['trip_mileage'] - journal_entry_one['trip_mileage']
 
-def write_csv_delta_days(journal_entry_string_one, journal_entry_string_two):
+def get_delta_days(journal_entry_one, journal_entry_two):
     """
-    write_csv_delta_days -Given two journal strings, computes the elapsed number of days between journal entries and
-        appends the change in days to the first journal entry string.
-    :param journal_entry_string_one: A journal entry string to be written to the csv for distance prediction.
-    :param journal_entry_string_two: A journal entry string to be written to the csv for distance prediction.
-    :return journal_entry_string_one: The provided journal entry string with the appended change in days.
+    get_delta_days -Returns the elapsed number of days between journal entries.
+    :param journal_entry_one: The first journal entry.
+    :param journal_entry_two: The next chronological journal entry.
+    :return delta.days: The elapsed number of days between journal entry one and two.
     """
-    journal_one_entries = journal_entry_string_one.split(",")
-    journal_one_date_string = journal_one_entries[len(journal_one_entries) - 3]
-    journal_one_date = datetime.strptime(journal_one_date_string, "%A %B %d %Y")
-    journal_two_entries = journal_entry_string_two.split(",")
-    journal_two_date_string = journal_two_entries[len(journal_two_entries) - 3]
-    journal_two_date = datetime.strptime(journal_two_date_string, "%A %B %d %Y")
-    delta = journal_two_date - journal_one_date
+    entry_one_date_string = journal_entry_one['date'].replace(",", "")
+    entry_two_date_string = journal_entry_two['date'].replace(",", "")
+    try:
+        entry_one_date = datetime.strptime(entry_one_date_string, "%A %B %d %Y")
+        entry_two_date = datetime.strptime(entry_two_date_string, "%A %B %d %Y")
+        delta = entry_two_date - entry_one_date
+    except ValueError:
+        print("Error: entry_one_date=%s\tentry_two_date=%s" %entry_two_date_string, entry_two_date_string)
     return delta.days
 
-"""
-write_to_csv -Writes the hiker data to CSV format at the specified storage_location in a form intended to be used
-    by Pandas for Linear Regression Least Squares approximation.
-:param valid_hikers: A dictionary containing the geocoded hiker locations.
-:param valid_shelters: A dictionary containing the AT Shelters dataset.
-:param storage_location_path: The location to write the created CSV to.
-"""
-def write_to_csv(valid_hikers, valid_shelters, storage_location_path):
-    # Build the CSV header (the column header for LstSqr).
+def get_csv_header(valid_shelters, storage_location_path):
+    """
+    get_csv_header -Returns an array of strings that form the csv header. Writes the csv header to the output file.
+    :param valid_shelters: An ordered dictionary composed of the validated shelters from the combined data sets.
+    :param storage_location_path: A os.path pointing to the storage location for the csv to be written to.
+    :return csv_header: An array of strings that make up the csv header (this array is written to the csv with comma
+        delimiters before returning).
+    """
     csv_header = []
     csv_header.append("HID")
     csv_header.append("ENUM")
@@ -130,6 +111,10 @@ def write_to_csv(valid_hikers, valid_shelters, storage_location_path):
         csv_header.append(str(sid) + "N")
         csv_header.append(str(sid) + "S")
         num_shelter_cols += 2
+    # Append a column header to keep track of the total mileage of the current entry:
+    csv_header.append("TM")
+    # Append a column header to keep track of the date of the current entry:
+    csv_header.append("Date")
     # Append a column header to keep track of the elapsed change in trip mileage between entries:
     csv_header.append("DTM")
     # Append a column header to keep track of the number of elapsed days between entries:
@@ -138,7 +123,7 @@ def write_to_csv(valid_hikers, valid_shelters, storage_location_path):
     csv_header.append("MPD")
     # Append a column header to serve as the regularization term:
     csv_header.append("bias")
-    print("csv_header_len: %d" % len(csv_header))
+    # print("csv_header_len: %d" % len(csv_header))
     with open(storage_location_path + "/DistancePrediction.csv", 'w') as fp:
         # Write the CSV header to the output file.
         for i in range(len(csv_header)):
@@ -146,31 +131,62 @@ def write_to_csv(valid_hikers, valid_shelters, storage_location_path):
                 fp.write(csv_header[i] + ",")
             else:
                 fp.write(csv_header[i] + "\n")
-    csv_journal_strings = []
+    return csv_header
+
+"""
+write_to_csv -Writes the hiker data to CSV format at the specified storage_location in a form intended to be used
+    by Pandas for Linear Regression Least Squares approximation.
+:param valid_hikers: A dictionary containing the geocoded hiker locations.
+:param valid_shelters: A dictionary containing the AT Shelters dataset.
+:param storage_location_path: The location to write the created CSV to.
+"""
+def write_to_csv(valid_hikers, valid_shelters, storage_location_path):
+    # Build and write the CSV header (the column header for LstSqr):
+    csv_header = get_csv_header(valid_shelters, storage_location_path)
     # Go through every hiker and create a row in the csv for each trail journal:
     for hid, hiker_info in valid_hikers.items():
-        # Go through each journal entry and create an appropriate row in the CSV.
-        for enum, entry in hiker_info['journal'].items():
-            # Label journal entry start_loc shelter and direction of departure (e.g. 102S or 102N):
-            journal_entry_string = str(hid) + "," + str(enum) + ","
-            journal_entry_string = write_csv_shelter_entry(csv_header, journal_entry_string, enum, entry)
+        hiker_strings = []
+        sorted_hiker_journal_keys = sorted([int(enum) for enum in hiker_info['journal'].keys()])
+        for enum1, enum2 in zip(sorted_hiker_journal_keys, sorted_hiker_journal_keys[1:]):
+            first_entry = hiker_info['journal'][str(enum1)]
+            next_entry = hiker_info['journal'][str(enum2)]
+            # Label csv entry with the hiker identifier and journal entry number:
+            journal_entry_string = str(hid) + "," + str(enum1) + ","
+            # Label csv entry with the start_loc shelter and direction of departure (e.g. 108N or 108S):
+            journal_entry_string = write_csv_shelter_entry(
+                csv_header=csv_header, journal_entry_string=journal_entry_string, entry_num=enum1,
+                journal_entry=first_entry)
             # Append the total trip mileage to the csv entry string:
-            journal_entry_string = journal_entry_string + str(entry['trip_mileage']) + ","
+            journal_entry_string = journal_entry_string + str(first_entry['trip_mileage']) + ","
             # Append the date to the csv entry string:
-            journal_entry_string = journal_entry_string + entry['date'].replace(",", "") + ","
-            # Save the journal entry string:
-            csv_journal_strings.append(journal_entry_string)
-    # Iterate over pairs of journal strings computing delta information and storing in the first string:
-    for journal_entry_string_one, journal_entry_string_two in zip(csv_journal_strings, csv_journal_strings[1:]):
-        journal_entry_string_one += write_csv_delta_trip_miles(journal_entry_string_one, journal_entry_string_two)
-        journal_entry_string_one += write_csv_delta_days(journal_entry_string_one, journal_entry_string_two)
-        # journal_entry_string_one +=
+            journal_entry_date = first_entry['date'].replace(",", "")
+            journal_entry_string = journal_entry_string + journal_entry_date + ","
+            # If there is another following entry compute the delta attributes:
+            if next_entry:
+                # Append the delta mileage between entries to the csv entry string:
+                delta_mileage = get_delta_trip_miles(journal_entry_one=first_entry, journal_entry_two=next_entry)
+                journal_entry_string = journal_entry_string + str(delta_mileage) + ","
+                # Append the elapsed number of days between entries to the csv entry string:
+                delta_days = get_delta_days(journal_entry_one=first_entry, journal_entry_two=next_entry)
+                journal_entry_string = journal_entry_string + str(delta_days) + ","
+                # Append miles per day between entry_one and entry_two:
+                if delta_days != 0:
+                    miles_per_day = delta_mileage / delta_days
+                else:
+                    miles_per_day = 0
+                journal_entry_string = journal_entry_string + str(miles_per_day) + ",1\n"
+            else:
+                # There is no next entry for this hiker. Can't compute delta attributes. Save as '-'.
+                journal_entry_string += "-,-,-,1\n"
+            hiker_strings.append(journal_entry_string)
+        with open(storage_location_path + "/DistancePrediction.csv", 'a') as fp:
+            for string in hiker_strings:
+                fp.write(string)
 
 def main(valid_shelters_path, valid_hikers_path, storage_location_path):
     valid_shelters = get_validated_shelters(validated_shelters_path=valid_shelters_path)
     valid_hikers = get_validated_hikers(validated_hikers_path=valid_hikers_path)
     write_to_csv(valid_hikers, valid_shelters, storage_location_path)
-    csv_header = ""
 
 if __name__ == '__main__':
     validated_shelter_data_path = os.path.abspath(
