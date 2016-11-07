@@ -47,26 +47,106 @@ def get_validated_shelters(validated_shelters_path):
             line_num += 1
     return validated_shelters
 
-def write_csv_shelter_entry(csv_header, journal_entry_string, entry_num, journal_entry):
+def get_csv_ending_header():
     """
-    write_csv_shelter_entry -Writes the shelter section of the journal entry string for a given entry. Returns the
-        provided journal_entry_string with the concatenated shelter information.
-    :param csv_header: The csv header to use as a guidline for building the csv journal entry row.
-    :param journal_entry_string: The string so far for the current journal entry. Should contain the 'HID,ENUM,'.
-    :param entry_num: The unique identifier associated with the journal entry.
-    :param journal_entry: The journal entry itself.
+    get_csv_ending_header - Returns a list composed of user specific information flags to be used in the csv header.
+    :return csv_ending_header: A list ready to be used as a section of the csv header once delimited by commas.
+    """
+    csv_ending_header = []
+    # Append a column header to keep track of the total mileage of the current entry:
+    csv_ending_header.append("TM")
+    # Append a column header to keep track of the date of the current entry:
+    csv_ending_header.append("Date")
+    # Append a column header to keep track of the elapsed change in trip mileage between entries:
+    csv_ending_header.append("DTM")
+    # Append a column header to keep track of the number of elapsed days between entries:
+    csv_ending_header.append("DD")
+    # Append a column header to keep track of the miles/day between journal entries:
+    csv_ending_header.append("MPD")
+    # Append a column header to keep track of the user's bias in relation to the average:
+    csv_ending_header.append("UB")
+    # Append a column header to serve as the regularization term:
+    csv_ending_header.append("bias")
+    return csv_ending_header
+
+def get_csv_shelter_header(valid_shelters):
+    """
+    get_csv_shelter_header - Returns a list composed of shelters' SID + dir; to be used in the CSV header.
+    :param valid_shelters: The dictionary of validated shelters read into memory from the appropriate file.
+    :return csv_shelter_header: A list ready to be used as a section of the csv header once delimited by commas and
+        appended with a newline character '\n'.
+    """
+    csv_shelter_header = []
+    for sid, shelter in valid_shelters.items():
+        # Append the ShelterID (SID) and the associated direction (North or South)
+        csv_shelter_header.append(str(sid) + "N")
+        csv_shelter_header.append(str(sid) + "S")
+    return csv_shelter_header
+
+def get_csv_header(csv_shelter_header, csv_ending_header):
+    """
+    get_csv_header - Returns a list representing the entire CSV header to be written to csv.
+    :param csv_shelter_header: A list composed of shelters and directions to be used in the csv header.
+    :param csv_ending_header: A list composed of user specific information obtained over several entries, to be used in
+        the csv header.
+    :return csv_header: A list ready to be used as the csv header once delimited by commas and appended with a
+        newline character '\n'.
+    """
+    csv_header = []
+    csv_header.append("HID")
+    csv_header.append("ENUM")
+    for col_header in csv_shelter_header:
+        csv_header.append(col_header)
+    for col_header in csv_ending_header:
+        csv_header.append(col_header)
+    return csv_header
+
+def write_csv_header(csv_shelter_header, csv_ending_header, storage_location_path):
+    """
+    write_csv_header - Writes the csv header to DistancePrediction.csv in the specified storage directory.
+    :param csv_shelter_header: The section of the csv header containing shelters.
+    :param csv_ending_header: The section of the csv header containing delta information.
+    :param storage_location_path: The location to write the output file 'DistancePrediction.csv'
+    :return: Upon completion, the file DistancePrediction.csv will be written to the specified storage directory;
+        populated with the CSV header.
+    """
+    csv_header = get_csv_header(csv_shelter_header, csv_ending_header)
+    # print("csv_header_len: %d" % len(csv_header))
+    with open(storage_location_path + "/DistancePrediction.csv", 'w') as fp:
+        # Write the CSV header to the output file.
+        for i in range(len(csv_header)):
+            if i != len(csv_header) - 1:
+                fp.write(csv_header[i] + ",")
+            else:
+                fp.write(csv_header[i] + "\n")
+
+def get_user_bias(hiker_string_dict, avg_hiker_delta_mileage):
+    """
+    get_user_bias -Computes a bias for the user representing how far above or below the average hiker they are. This is
+        computed by averaging the hiker's daily mileage across all valid start_locations in comparison to the average
+        hiker.
+    :param hiker_strings: The
+    :param avg_hiker_delta_mileage:
     :return:
     """
-    # Go through every hikers journal; extracting each journal entry.
-    # The hiker journal entries in directory VHDistancePrediction must have at least one valid start_loc.
-    for i in range(2, len(csv_header) - 6):
-        if journal_entry['start_loc']['SID'] + journal_entry['start_loc']['dir'] == csv_header[i]:
+    return user_bias
+
+def get_csv_shelter_string(csv_shelter_header, start_loc):
+    """
+    get_csv_shelter_string -Returns a shelter string for encoding to CSV. The string is of the form SID1N, SID1S, ...
+    :param csv_shelter_header:
+    :param start_loc:
+    :return hiker_shelter_string:
+    """
+    hiker_shelter_string = ""
+    for i in range(len(csv_shelter_header)):
+        if start_loc['SID'] + start_loc['dir'] == csv_shelter_header[i]:
             # The entry for the start_loc matches the column header.
-            journal_entry_string += "1,"
+            hiker_shelter_string += "1,"
         else:
             # The entry for the start_loc does not match the column header.
-            journal_entry_string += "0,"
-    return journal_entry_string
+            hiker_shelter_string += "0,"
+    return hiker_shelter_string
 
 def get_delta_trip_miles(journal_entry_one, journal_entry_two):
     """
@@ -90,48 +170,102 @@ def get_delta_days(journal_entry_one, journal_entry_two):
         entry_one_date = datetime.strptime(entry_one_date_string, "%A %B %d %Y")
         entry_two_date = datetime.strptime(entry_two_date_string, "%A %B %d %Y")
         delta = entry_two_date - entry_one_date
+        return delta.days
     except ValueError:
         print("Error: entry_one_date=%s\tentry_two_date=%s" %entry_two_date_string, entry_two_date_string)
-    return delta.days
+        return None
 
-def get_csv_header(valid_shelters, storage_location_path):
+
+def get_average_miles_per_day(hiker_strings_dict):
     """
-    get_csv_header -Returns an array of strings that form the csv header. Writes the csv header to the output file.
-    :param valid_shelters: An ordered dictionary composed of the validated shelters from the combined data sets.
-    :param storage_location_path: A os.path pointing to the storage location for the csv to be written to.
-    :return csv_header: An array of strings that make up the csv header (this array is written to the csv with comma
-        delimiters before returning).
+    get_average_miles_per_day - Returns the average change in mileage per day for all recorded hikers.
+    :param hiker_strings_dict: A dictionary containing information between entries for each hiker.
+    :return average_miles_per_day: The average number of miles-per-day for all recorded hikers.
     """
-    csv_header = []
-    csv_header.append("HID")
-    csv_header.append("ENUM")
-    num_shelter_cols = 0
-    for sid, shelter in valid_shelters.items():
-        # Append the ShelterID (SID) and the associated direction (North or South)
-        csv_header.append(str(sid) + "N")
-        csv_header.append(str(sid) + "S")
-        num_shelter_cols += 2
-    # Append a column header to keep track of the total mileage of the current entry:
-    csv_header.append("TM")
-    # Append a column header to keep track of the date of the current entry:
-    csv_header.append("Date")
-    # Append a column header to keep track of the elapsed change in trip mileage between entries:
-    csv_header.append("DTM")
-    # Append a column header to keep track of the number of elapsed days between entries:
-    csv_header.append("DD")
-    # Append a column header to keep track of the miles/day between journal entries:
-    csv_header.append("MPD")
-    # Append a column header to serve as the regularization term:
-    csv_header.append("bias")
-    # print("csv_header_len: %d" % len(csv_header))
-    with open(storage_location_path + "/DistancePrediction.csv", 'w') as fp:
-        # Write the CSV header to the output file.
-        for i in range(len(csv_header)):
-            if i != len(csv_header) - 1:
-                fp.write(csv_header[i] + ",")
-            else:
-                fp.write(csv_header[i] + "\n")
-    return csv_header
+    num_entries = 0
+    total_miles_per_day = 0
+    i = 0
+    for hid, hiker_string_info in hiker_strings_dict.items():
+        if i == 0:
+            pass
+        else:
+            for enum, delta_info in hiker_string_info['journal_strings'].items():
+                num_entries += 1
+                total_miles_per_day += delta_info['miles_per_day']
+        i += 1
+    average_miles_per_day = total_miles_per_day / num_entries
+    return average_miles_per_day
+
+
+def get_hiker_average_miles_per_day(hiker_strings_entry):
+    total_num_entries = len(list(hiker_strings_entry.keys()))
+    total_miles_per_day = 0
+    for enum, delta_info in hiker_strings_entry.items():
+        total_miles_per_day += delta_info['miles_per_day']
+    hiker_average_miles_per_day = total_miles_per_day / total_num_entries
+    return hiker_average_miles_per_day
+
+
+def get_miles_per_day(journal_entry_one, journal_entry_two):
+    delta_trip_miles = get_delta_trip_miles(journal_entry_one, journal_entry_two)
+    delta_days = get_delta_days(journal_entry_one, journal_entry_two)
+    if delta_days != 0:
+        miles_per_day = delta_trip_miles / delta_days
+    else:
+        miles_per_day = 0
+    return miles_per_day
+
+def build_hiker_strings_for_csv(valid_hikers, valid_shelters):
+    """
+    build_hiker_strings_for_csv -TODO: method descriptor.
+    :param valid_hikers: TODO: waka flaka
+    :param valid_shelters: TODO: waka flaka
+    :return:
+    """
+    hiker_strings = OrderedDict()
+    hiker_strings['avg_miles_per_day'] = None
+    for hid, hiker_info in valid_hikers.items():
+        hiker_strings[hid] = {'computed_info': {'user_bias': None, 'hiker_avg_miles_per_day': None}}
+        hiker_strings[hid]['journal_strings'] = OrderedDict()
+        # Sort the hiker's journal chronologically:
+        sorted_hiker_journal_keys = sorted([int(enum) for enum in hiker_info['journal'].keys()])
+        for enum1, enum2 in zip(sorted_hiker_journal_keys, sorted_hiker_journal_keys[1:]):
+            first_entry = hiker_info['journal'][str(enum1)]
+            second_entry = hiker_info['journal'][str(enum2)]
+            hiker_strings[hid]['journal_strings'][enum1] = {
+                'trip_mileage': first_entry['trip_mileage'],
+                'date': first_entry['date'].replace(",", ""),
+                'delta_mileage': get_delta_trip_miles(first_entry, second_entry),
+                'delta_days': get_delta_days(first_entry, second_entry),
+                'miles_per_day': get_miles_per_day(first_entry, second_entry),
+                'bias': 1,
+                'identifying_string': str(hid) + "," + str(enum1) + ",",
+                'shelter_string': get_csv_shelter_string(get_csv_shelter_header(valid_shelters), first_entry['start_loc']),
+                'delta_string': ""
+            }
+            hiker_strings[hid]['journal_strings'][enum1]['delta_string'] = \
+                str(hiker_strings[hid]['journal_strings'][enum1]['trip_mileage']) + "," \
+                + hiker_strings[hid]['journal_strings'][enum1]['date'] + "," \
+                + str(hiker_strings[hid]['journal_strings'][enum1]['delta_mileage']) + "," \
+                + str(hiker_strings[hid]['journal_strings'][enum1]['delta_days']) + "," \
+                + str(hiker_strings[hid]['journal_strings'][enum1]['miles_per_day']) + ","
+        # Now that all journal entries and associated pairwise delta info. is logged, compute hiker stats:
+        hiker_strings[hid]['computed_info']['hiker_avg_miles_per_day'] = get_hiker_average_miles_per_day(hiker_strings[hid]['journal_strings'])
+    # Now that all hiker dictionaries are built, iterate through hiker strings and compute average delta miles:
+    hiker_strings['avg_miles_per_day'] = get_average_miles_per_day(hiker_strings)
+    # Calculate the user bias and append to hiker dictionaries:
+    i = 0
+    for hid, hiker_info in hiker_strings.items():
+        if i == 0:
+            pass
+        else:
+            user_bias = hiker_info['computed_info']['hiker_avg_miles_per_day'] - hiker_strings['avg_miles_per_day']
+            hiker_strings[hid]['computed_info']['user_bias'] = user_bias
+            for enum, delta_info in hiker_info['journal_strings'].items():
+                delta_string = delta_info['delta_string']
+                hiker_strings[hid]['journal_strings'][enum]['delta_string'] = delta_string + str(user_bias) + ",1\n"
+        i += 1
+    return hiker_strings
 
 """
 write_to_csv -Writes the hiker data to CSV format at the specified storage_location in a form intended to be used
@@ -141,47 +275,29 @@ write_to_csv -Writes the hiker data to CSV format at the specified storage_locat
 :param storage_location_path: The location to write the created CSV to.
 """
 def write_to_csv(valid_hikers, valid_shelters, storage_location_path):
-    # Build and write the CSV header (the column header for LstSqr):
+    # Build the CSV header (the column header for LstSqr):
     csv_header = get_csv_header(valid_shelters, storage_location_path)
-    # Go through every hiker and create a row in the csv for each trail journal:
-    for hid, hiker_info in valid_hikers.items():
-        hiker_strings = []
-        sorted_hiker_journal_keys = sorted([int(enum) for enum in hiker_info['journal'].keys()])
-        for enum1, enum2 in zip(sorted_hiker_journal_keys, sorted_hiker_journal_keys[1:]):
-            first_entry = hiker_info['journal'][str(enum1)]
-            next_entry = hiker_info['journal'][str(enum2)]
-            # Label csv entry with the hiker identifier and journal entry number:
-            journal_entry_string = str(hid) + "," + str(enum1) + ","
-            # Label csv entry with the start_loc shelter and direction of departure (e.g. 108N or 108S):
-            journal_entry_string = write_csv_shelter_entry(
-                csv_header=csv_header, journal_entry_string=journal_entry_string, entry_num=enum1,
-                journal_entry=first_entry)
-            # Append the total trip mileage to the csv entry string:
-            journal_entry_string = journal_entry_string + str(first_entry['trip_mileage']) + ","
-            # Append the date to the csv entry string:
-            journal_entry_date = first_entry['date'].replace(",", "")
-            journal_entry_string = journal_entry_string + journal_entry_date + ","
-            # If there is another following entry compute the delta attributes:
-            if next_entry:
-                # Append the delta mileage between entries to the csv entry string:
-                delta_mileage = get_delta_trip_miles(journal_entry_one=first_entry, journal_entry_two=next_entry)
-                journal_entry_string = journal_entry_string + str(delta_mileage) + ","
-                # Append the elapsed number of days between entries to the csv entry string:
-                delta_days = get_delta_days(journal_entry_one=first_entry, journal_entry_two=next_entry)
-                journal_entry_string = journal_entry_string + str(delta_days) + ","
-                # Append miles per day between entry_one and entry_two:
-                if delta_days != 0:
-                    miles_per_day = delta_mileage / delta_days
-                else:
-                    miles_per_day = 0
-                journal_entry_string = journal_entry_string + str(miles_per_day) + ",1\n"
+    hiker_strings = build_hiker_strings_for_csv(valid_hikers, valid_shelters)
+    # TODO: Write information populated in hiker_strings to csv.
+    csv_shelter_header = get_csv_shelter_header(valid_shelters)
+    csv_ending_header = get_csv_ending_header()
+    csv_header = get_csv_header(csv_shelter_header, csv_ending_header)
+    with open(storage_location_path + "/DistancePrediction.csv", 'a') as fp:
+        for i in range(len(csv_header)):
+            if i != len(csv_header) - 1:
+                fp.write(csv_header[i] + ",")
             else:
-                # There is no next entry for this hiker. Can't compute delta attributes. Save as '-'.
-                journal_entry_string += "-,-,-,1\n"
-            hiker_strings.append(journal_entry_string)
-        with open(storage_location_path + "/DistancePrediction.csv", 'a') as fp:
-            for string in hiker_strings:
-                fp.write(string)
+                fp.write(csv_header[i] + "\n")
+        i = 0
+        for hid, hiker_strings in hiker_strings.items():
+            hiker_string = ""
+            if i != 0:
+                for enum, journal_strings in hiker_strings['journal_strings'].items():
+                    hiker_string += journal_strings['identifying_string']
+                    hiker_string += journal_strings['shelter_string']
+                    hiker_string += journal_strings['delta_string']
+                fp.write(hiker_string)
+            i += 1
 
 def main(valid_shelters_path, valid_hikers_path, storage_location_path):
     valid_shelters = get_validated_shelters(validated_shelters_path=valid_shelters_path)
