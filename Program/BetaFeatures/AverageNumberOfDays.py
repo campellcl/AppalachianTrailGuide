@@ -1,9 +1,10 @@
 """
-DepartureStatistics.py
-TODO: Class descriptor.
+AverageNumberOfDays.py
+TODO: Class Descriptor.
 :author: Chris Campell
 :version: 11/23/2016
 """
+
 __author__ = "Chris Campell"
 __version__ = "11/23/2016"
 
@@ -34,7 +35,6 @@ def get_validated_hikers(validated_hikers_path):
             sorted_hiker_journal[int(enum)] = entry
         sorted_validated_hikers[hid]['journal'] = OrderedDict(sorted(sorted_hiker_journal.items()))
     # Sort the hiker's trail journals by entry number (chronologically....kinda):
-    print("Read %d hikers from %s." % (len(sorted_validated_hikers), validated_hikers_path))
     return sorted_validated_hikers
 
 def get_validated_thru_hikers(validated_hikers):
@@ -100,135 +100,123 @@ def get_northbound_hikers(validated_hikers):
             validated_hikers[hid]['dir'] = "S"
     return northbound_hikers
 
-def display_month_departure_stats(month_departure_stats):
-    N  = len(month_departure_stats)
-    monthly_departure_stats = [value for value in month_departure_stats.values()]
-    # x locations for the groups:
-    ind = np.arange(N)
-    # width of the bars:
-    width = 0.5
-    fig, ax = plt.subplots()
-    rects1 = ax.bar(ind, monthly_departure_stats, width, color='g')
-    ax.set_xlabel('Month of the Year')
-    ax.set_ylabel('Number of Hikers')
-    ax.set_title('Month Thru Hikers Depart')
-    ax.set_xticks(ind + width)
-    plt.xlabel('Jan    Feb    Mar    Apr    May    Jun    July    Aug    Sep    Oct    Nov    Dec')
-    storage_loc = os.path.abspath(os.path.join(os.path.dirname(__file__), 'monthly_departure_stats.png'))
-    plt.savefig(storage_loc)
+def get_thru_hiker_entry_num(hiker_journal):
+    """
+    get_thru_hiker_entry_num -Returns the number associated with the journal entry where the hiker passed the 2,000
+        mile mark threshold.
+    :param hiker_journal: The ordered list of journal entries.
+    :return entry_num: The entry number corresponding to the journal entry in which the hiker surpassed 2,000 miles. If
+        the hiker never reaches thru hiker status then -1 is returned as the entry number.
+    """
+    entry_num = -1
+    for enum, entry in hiker_journal.items():
+        if entry['trip_mileage'] >= 2000:
+            entry_num = enum
+            break
+    return entry_num
 
-def display_southbound_month_departure_stats(southbound_month_departure_stats):
-    N = len(southbound_month_departure_stats)
-    monthly_departure_stats = [value for value in southbound_month_departure_stats.values()]
-    # x locations for the groups:
-    ind = np.arange(N)
-    # width of the bars:
-    width = 0.5
+def display_northbound_days_taken(northbound_days_taken, northbound_thru_hikers):
+    print("Number of Northbound Thru-Hikers: %d" % len(northbound_thru_hikers))
+    plt.hist(list(northbound_days_taken.values()), bins=50)
+    plt.xlabel('Number of Days')
+    plt.ylabel('Number of Hikers')
+    plt.title("Number of Days Taken for Northbound Hikers to Hike 2,000 Miles of the AT")
+    plt.show()
+    '''
+    num_categories_days_taken = len(northbound_days_taken)
+    northbound_days_taken_bins = [key for key in northbound_days_taken.keys()]
+    # northbound_days_taken_bins = np.arange(0, 100, step=10)
+    northbound_days_taken_stats = [value for value in northbound_days_taken.values()]
     fig, ax = plt.subplots()
-    rects1 = ax.bar(ind, monthly_departure_stats, width, color='r')
-    ax.set_xlabel('Month of the Year')
-    ax.set_ylabel('Number of Hikers')
-    ax.set_title('Month Southbound Thru Hikers Depart')
-    ax.set_xticks(ind + width)
-    plt.xlabel('Jan    Feb    Mar    Apr    May    Jun    July    Aug    Sep    Oct    Nov    Dec')
-    storage_loc = os.path.abspath(os.path.join(os.path.dirname(__file__), 'southbound_monthly_departure_stats.png'))
-    plt.savefig(storage_loc)
-
-def display_northbound_month_departure_stats(northbound_month_departure_stats):
-    N  = len(northbound_month_departure_stats)
-    monthly_departure_stats = [value for value in northbound_month_departure_stats.values()]
     # x locations for the groups:
-    ind = np.arange(N)
+    bar_heights = np.arange(num_categories_days_taken)
     # width of the bars:
-    width = 0.5
-    fig, ax = plt.subplots()
-    rects1 = ax.bar(ind, monthly_departure_stats, width, color='b')
-    ax.set_xlabel('Month of the Year')
+    bar_width = 0.25
+    rects1 = ax.bar(bar_heights + bar_width, northbound_days_taken_stats, color='b')
+    ax.set_xlabel('Number of Days')
     ax.set_ylabel('Number of Hikers')
-    ax.set_title('Month Northbound Thru Hikers Depart')
-    ax.set_xticks(ind + width)
-    plt.xlabel('Jan    Feb    Mar    Apr    May    Jun    July    Aug    Sep    Oct    Nov    Dec')
-    storage_loc = os.path.abspath(os.path.join(os.path.dirname(__file__), 'northbound_monthly_departure_stats.png'))
+    ax.set_title("Number of Days Taken for Northbound Hikers to Hike 2,000 Miles of the AT")
+    ax.set_xticks(northbound_days_taken_bins)
+    ax.set_xticklabels(northbound_days_taken_bins)
+    # plt.xlabel('Jan    Feb    Mar    Apr    May    Jun    July    Aug    Sep    Oct    Nov    Dec')
+    storage_loc = os.path.abspath(os.path.join(os.path.dirname(__file__), 'northbound_avg_num_days.png'))
+    plt.show()
     plt.savefig(storage_loc)
-
-def display_thru_hikers(validated_hikers, thru_hikers):
-    plt.title('Thru Hikers and Non Thru Hikers on the AT')
-    labels=['thru hikers', 'non-thru hikers']
-    explode = (0, 0)
-    colors = ['#33840e', '#47c10f']
-    fraction_of_thru_hikers = ((len(thru_hikers) * 100)/len(validated_hikers))
-    fraction_of_non_thru_hikers = 100 - fraction_of_thru_hikers
-    print("Number of Hikers: %d" %len(validated_hikers))
-    print("Number of Thru Hikers: %d" % len(thru_hikers))
-    print("fraction of thru hikers: %d" % fraction_of_thru_hikers)
-    fractions = [fraction_of_thru_hikers, fraction_of_non_thru_hikers]
-    plt.pie(fractions, explode=explode, labels=labels, colors=colors, autopct='%1.1f%%')
-    plt.axis('square')
-    storage_loc = os.path.abspath(os.path.join(os.path.dirname(__file__), 'percent_thru_hikers.png'))
-    plt.savefig(storage_loc)
+    ndt = plt.hist2d(list(northbound_days_taken.values()), list(northbound_days_taken.keys()), bins=5)
+    plt.title("Number of Days Taken for Northbound Hikers to Hike 2,000 Miles of the AT")
+    plt.xlabel("Number of Days Taken")
+    plt.ylabel("Number of Hikers")
+    plt.show()
+    '''
 
 def main(valid_hikers_path):
     valid_hikers = get_validated_hikers(validated_hikers_path=valid_hikers_path)
     thru_hikers = get_validated_thru_hikers(valid_hikers)
-    display_thru_hikers(valid_hikers, thru_hikers)
-    month_departure_stats = {}
-    for hid, hiker_info in thru_hikers.items():
-        first_entry_num = list(hiker_info['journal'].keys())[0]
-        first_entry = hiker_info['journal'][first_entry_num]
-        first_entry_date = first_entry['date'].replace(",", "")
-        try:
-            entry_date = datetime.strptime(first_entry_date, "%A %B %d %Y")
-        except Exception:
-            print("Exception encountered with hid: %d. Entry number: %d." %(hid, first_entry_num))
-        if entry_date.month in month_departure_stats:
-            month_departure_stats[entry_date.month] += 1
-        else:
-            month_departure_stats[entry_date.month] = 1
-    print("Total Number Hikers Considered (Northbound and Southbound): %d" %len(thru_hikers))
-    print("Monthly Departure Statistics (Northbound and Southbound):")
-    print(month_departure_stats)
-    display_month_departure_stats(month_departure_stats)
+    northbound_thru_hikers = get_northbound_hikers(thru_hikers)
+    southbound_thru_hikers = get_southbound_hikers(thru_hikers)
 
-    northbound_departure_stats = {}
-    northbound_thru_hikers = get_validated_thru_hikers(get_northbound_hikers(valid_hikers))
+    northbound_days_taken = {}
     for hid, hiker_info in northbound_thru_hikers.items():
         first_entry_num = list(hiker_info['journal'].keys())[0]
+        thru_hiker_threshold_enum = get_thru_hiker_entry_num(hiker_info['journal'])
+        # last_entry_num = list(hiker_info['journal'].keys())[len(hiker_info['journal'].keys()) - 1]
         first_entry = hiker_info['journal'][first_entry_num]
         first_entry_date = first_entry['date'].replace(",", "")
+        last_entry = hiker_info['journal'][thru_hiker_threshold_enum]
+        last_entry_date = last_entry['date'].replace(",", "")
         try:
-            entry_date = datetime.strptime(first_entry_date, "%A %B %d %Y")
+            first_entry_date = datetime.strptime(first_entry_date, "%A %B %d %Y")
         except Exception:
             print("Exception encountered with hid: %d. Entry number: %d." %(hid, first_entry_num))
-        if entry_date.month in northbound_departure_stats:
-            northbound_departure_stats[entry_date.month] += 1
+        try:
+            last_entry_date = datetime.strptime(last_entry_date, "%A %B %d %Y")
+        except Exception:
+            print("Exception encountered with hid: %d. Entry number: %d." %(hid, thru_hiker_threshold_enum))
+        delta = last_entry_date - first_entry_date
+        if delta.days in northbound_days_taken:
+            northbound_days_taken[delta.days] += 1
         else:
-            northbound_departure_stats[entry_date.month] = 1
-    print("\nTotal Number Hikers Considered (Northbound): %d" %len(northbound_thru_hikers))
-    print("Monthly Departure Statistics (Northbound):")
-    print(northbound_departure_stats)
-    display_northbound_month_departure_stats(northbound_departure_stats)
+            northbound_days_taken[delta.days] = 1
 
-    southbound_departure_stats = {}
-    southbound_thru_hikers = get_validated_thru_hikers(get_southbound_hikers(valid_hikers))
+    southbound_days_taken = {}
     for hid, hiker_info in southbound_thru_hikers.items():
         first_entry_num = list(hiker_info['journal'].keys())[0]
+        thru_hiker_threshold_enum = get_thru_hiker_entry_num(hiker_info['journal'])
+        # last_entry_num = list(hiker_info['journal'].keys())[len(hiker_info['journal'].keys()) - 1]
         first_entry = hiker_info['journal'][first_entry_num]
         first_entry_date = first_entry['date'].replace(",", "")
+        last_entry = hiker_info['journal'][thru_hiker_threshold_enum]
+        last_entry_date = last_entry['date'].replace(",", "")
         try:
-            entry_date = datetime.strptime(first_entry_date, "%A %B %d %Y")
+            first_entry_date = datetime.strptime(first_entry_date, "%A %B %d %Y")
         except Exception:
             print("Exception encountered with hid: %d. Entry number: %d." %(hid, first_entry_num))
-        if entry_date.month in southbound_departure_stats:
-            southbound_departure_stats[entry_date.month] += 1
+        try:
+            last_entry_date = datetime.strptime(last_entry_date, "%A %B %d %Y")
+        except Exception:
+            print("Exception encountered with hid: %d. Entry number: %d." %(hid, thru_hiker_threshold_enum))
+        delta = last_entry_date - first_entry_date
+        if delta.days in southbound_days_taken:
+            southbound_days_taken[delta.days] += 1
         else:
-            southbound_departure_stats[entry_date.month] = 1
-    print("\nTotal Number Hikers Considered (Southbound): %d" % len(southbound_thru_hikers))
-    print("Monthly Departure Statistics (Southbound):")
-    print(southbound_departure_stats)
-    display_southbound_month_departure_stats(southbound_departure_stats)
+            southbound_days_taken[delta.days] = 1
+    # Filter out negative numbers:
+    northbound_non_negative_keys = sorted([key for key in northbound_days_taken.keys() if key >= 0])
+    southbound_non_negative_keys = sorted([key for key in southbound_days_taken.keys() if key >= 0])
+    northbound_days_taken_non_negative = OrderedDict()
+    southbound_days_taken_non_negative = OrderedDict()
+    for key in northbound_non_negative_keys:
+        northbound_days_taken_non_negative[key] = northbound_days_taken[key]
+    for key in southbound_non_negative_keys:
+        southbound_days_taken_non_negative[key] = southbound_days_taken[key]
+
+    print("[Northbound Hikers] Days Taken to Complete at least 2,000 miles:")
+    print(northbound_days_taken_non_negative)
+    display_northbound_days_taken(northbound_days_taken_non_negative, northbound_thru_hikers)
+    print("\n[Southbound Hikers] Days Taken to Complete at least 2,000 miles:")
+    print(southbound_days_taken_non_negative)
 
 if __name__ == '__main__':
-
     validated_hikers_data_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), '../..', 'Data/HikerData/VHDistancePrediction/'))
     main(valid_hikers_path=validated_hikers_data_path)

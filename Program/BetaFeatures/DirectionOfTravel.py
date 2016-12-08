@@ -11,6 +11,8 @@ import os
 import json
 from collections import OrderedDict
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 def get_validated_hikers(validated_hikers_path):
     """
@@ -64,6 +66,19 @@ def main(valid_hikers_path):
     print("Total Number of Hikers: %d" % len(valid_hikers))
     print("Number of Northbound Hikers: %d" %num_northbound_hikers)
     print("Number of Southbound Hikers: %d" %num_southbound_hikers)
+    plt.title('Hiker Direction of Travel on the Appalachian Trail')
+    labels = ['northbound', 'southbound']
+    explode = (0, 0)
+    colors = ['#488ec4', '#456fcc']
+    fraction_of_northbound_hikers = (num_northbound_hikers * 100)/len(valid_hikers)
+    fraction_of_southbound_hikers = (num_southbound_hikers * 100)/len(valid_hikers)
+    print("fraction of northbound hikers: %d" % fraction_of_northbound_hikers)
+    print("fraction of southbound hikers: %d" % fraction_of_southbound_hikers)
+    fractions = [fraction_of_northbound_hikers, fraction_of_southbound_hikers]
+    plt.pie(fractions, explode=explode, labels=labels, colors=colors, autopct="%1.1f%%")
+    plt.axis('square')
+    storage_loc = os.path.abspath(os.path.join(os.path.dirname(__file__), 'direction_of_travel.png'))
+    plt.savefig(storage_loc)
 if __name__ == '__main__':
      validated_hikers_data_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), '../..', 'Data/HikerData/VHDistancePrediction/'))
