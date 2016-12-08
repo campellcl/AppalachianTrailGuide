@@ -12,8 +12,41 @@ import matplotlib.pyplot as plt
 from sklearn.cross_validation import train_test_split
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
+from collections import OrderedDict
+import json
 
-def main(input_dir, request_new_model):
+def write_model_to_json(model_results):
+    storage_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '../LinearRegression/')
+    )
+    # Sort model results by northbound and southbound shelters.
+    northbound_shelter_constants = {}
+    southbound_shelter_constants = {}
+    for name, result in model_results.items():
+        if 'LOCDIR' in name:
+            # Find T.
+            sid_char_index = name.index('.')
+            bracket_char_index = name.index(']')
+            sid_name = name[sid_char_index + 1:(bracket_char_index - 1)]
+            if name[bracket_char_index - 1] == 'S':
+                southbound_shelter_constants[int(sid_name)] = result
+            elif name[bracket_char_index - 1] == 'N':
+                northbound_shelter_constants[int(sid_name)] = result
+    sorted_northbound_shelter_constants = OrderedDict()
+    sorted_southbound_shelter_constants = OrderedDict()
+    # Sort by key
+    sorted_northbound_shelter_constant_keys = sorted(list(northbound_shelter_constants.keys()))
+    sorted_southbound_shelter_constant_keys = sorted(list(southbound_shelter_constants.keys()))
+    for key in sorted_northbound_shelter_constant_keys:
+        sorted_northbound_shelter_constants[key] = {'sid': key, 'constant': northbound_shelter_constants[key]}
+    for key in sorted_southbound_shelter_constant_keys:
+        sorted_southbound_shelter_constants[key] = {'sid': key, 'constant': southbound_shelter_constants[key]}
+    with open(storage_dir + '/southbound_shelter_constants.json', 'w') as fp:
+        json.dump(sorted_southbound_shelter_constants, fp=fp, sort_keys=True, indent=2)
+    with open(storage_dir + '/northbound_shelter_constants.json', 'w') as fp:
+        json.dump(sorted_northbound_shelter_constants, fp=fp, sort_keys=True, indent=2)
+
+def main(input_dir, request_new_model, write_model):
     df = pd.read_csv(input_dir + "\DistancePrediction.csv")
     # Filter the data frame removing any entries with negative miles-per-day or zero-miles per day:
     df = df[df['MPD'] > 2]
@@ -41,16 +74,24 @@ def main(input_dir, request_new_model):
         df_train = df_train.copy()
         df_train['MPD_PRED'] = np.exp(ols_model.predict(df_train))
         df_train.to_csv("df_train.csv")
+        if write_model:
+            # Write the model's lookup table of constants to json.
+            write_model_to_json(model_results=ols_model.params)
     else:
         df_test = pd.read_csv("df_test.csv", index_col=0)
         df_train = pd.read_csv("df_train.csv", index_col=0)
 
         df_train.plot(kind='scatter', x='MPD', y='MPD_PRED')
-        plt.title("Training Data")
-        plt.show()
+        plt.title("Training Data Predicted vs. Actual")
+        plt.xlabel("Hiker Miles-Per-Day")
+        plt.ylabel("Hiker Predicted Miles-Per-Day")
+        plt.savefig("training_data_scatter_plot.png")
 
+        plt.clf()
         df_test.plot(kind='scatter', x='MPD', y='MPD_PRED')
-        plt.title("Test Data")
+        plt.title("Testing Data Predicted vs. Actual")
+        plt.xlabel("Hiker Miles-Per-Day Count")
+        plt.ylabel("Hiker Prediced Miles-Per-Day Count")
         plt.show()
 
         plt.clf()
@@ -72,9 +113,10 @@ def main(input_dir, request_new_model):
         x_bin_edges = np.arange(0, 50, 1)
         y_bin_edges = np.arange(0, 25, 1)
         plt.hist2d(x=df_test.MPD, y=df_test.MPD_PRED, bins=[x_bin_edges, y_bin_edges], hold=True)
-        plt.title("Test Data")
+        plt.title("Testing Data Predicted vs. Actual")
+        plt.xlabel("Hiker Miles-Per-Day Actual")
+        plt.ylabel("Hiker Miles-Per-Day Predicted")
         plt.colorbar()
-
         ols_line_best_fit = smf.ols(formula='MPD_PRED ~ MPD + 1', data=df_test).fit()
         pred_regression_y_max = ols_line_best_fit.predict({'MPD': max(df_test.MPD)})
         pred_regression_y_min = ols_line_best_fit.predict({'MPD': min(df_test.MPD)})
@@ -83,8 +125,9 @@ def main(input_dir, request_new_model):
         plt.plot([min(df_test.MPD), max(df_test.MPD)], [pred_regression_y_min, pred_regression_y_max], c='red', linewidth=2)
         # plt.plot([0, 50], [0, 25], c='green', linewidth=2)
         plt.show()
+        # plt.savefig("testing_vs_predicted_2d_hist.png")
         # Ransac 'random subset....' can be used for removing outliers.
 
 if __name__ == '__main__':
     hiker_journal_entry_csv = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', 'Data/HikerData/'))
-    main(input_dir=hiker_journal_entry_csv, request_new_model=True)
+    main(input_dir=hiker_journal_entry_csv, request_new_model=False, write_model=False)

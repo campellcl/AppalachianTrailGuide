@@ -72,7 +72,7 @@ def get_csv_header_list():
     csv_header = []
     csv_header.append("HID")
     csv_header.append("ENUM")
-    csv_header.append("LOC-DIR")
+    csv_header.append("LOCDIR")
     # Append a column header to keep track of the total mileage of the current entry:
     csv_header.append("TM")
     # Append a column header to keep track of the date of the current entry:
@@ -83,6 +83,8 @@ def get_csv_header_list():
     csv_header.append("DD")
     # Append a column header to keep track of the miles/day between journal entries:
     csv_header.append("MPD")
+    # Append a column header to keep track of the user's average miles per day:
+    csv_header.append("AVG_MPD")
     # Append a column header to keep track of the user's bias in relation to the average:
     csv_header.append("UB")
     # Append a column header to serve as the regularization term:
@@ -223,7 +225,7 @@ def main(valid_shelters_path, valid_hikers_path, storage_location_path):
                     + entry['loc-dir'] + "," + str(entry['trip_mileage']) + "," \
                     + entry['date'] + "," + str(entry['delta_mileage']) + "," \
                     + str(entry['delta_days']) + "," + str(entry['miles_per_day']) + "," \
-                    + str(hiker['user_bias']) + ",1\n"
+                    + str(hiker['avg_miles_per_day']) + "," + str(hiker['user_bias']) + ",1\n"
                 valid_hikers[hid]['journal'][enum]['entry_string'] = journal_entry_string
     write_to_csv(valid_hikers, storage_location_path)
 

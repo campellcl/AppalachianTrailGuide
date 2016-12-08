@@ -3,6 +3,7 @@ ShelterDuplicateRemover.py
 Takes the combined AT Shelters data set and removes duplicates, then exports to CSV.
 :Author: Chris Campell
 :Version: 8/25/2016
+WARNING: SCRIPT DEPRECATED. DUPLICATE SHELTER ENTRIES MANUALLY REMOVED AS OF 10/27/2016.
 """
 
 import os
